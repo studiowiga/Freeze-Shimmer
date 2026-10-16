@@ -24,6 +24,7 @@ static const Preset kPresets[] =
     { "AUTO FREEZE SWELL", 0, 2, { 0.80f, 0.90f, 0.45f, 0.85f, 0.70f, 0.00f, 0.60f, 0.20f, 0.25f, 0.35f, 0.55f, 0.25f, 0.80f } },
     { "DARK CATHEDRAL",    1, 0, { 0.70f, 0.50f, 0.60f, 1.00f, 0.92f, 0.00f, 0.50f, 0.30f, 0.15f, 0.45f, 0.12f, 0.10f, 0.40f } },
     { "TRUE DELAY",        0, 0, { 0.90f, 0.50f, 0.50f, 0.00f, 0.30f, 0.45f, 0.50f, 0.20f, 0.00f, 0.05f, 0.60f, 0.20f, 0.30f } },
+    { "FROZEN PLATE",      0, 0, { 0.80f, 0.90f, 0.50f, 1.00f, 0.66f, 0.00f, 0.50f, 0.30f, 0.00f, 0.30f, 0.45f, 0.20f, 0.35f } },
 };
 static constexpr int kNumPresets = (int) (sizeof (kPresets) / sizeof (kPresets[0]));
 }

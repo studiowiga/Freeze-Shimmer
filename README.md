@@ -112,13 +112,13 @@ voir *MIDI learn* / mapping de paramètres de votre DAW). Canal réglable (menu 
 | 27 | LAYER | 104 · **64** | Footswitch (≥ 64 enfoncé) — 64 = pédale de sustain |
 | 105 | Effet actif ≥ 64 / bypass | 106 | Relâche le freeze |
 
-*Program Change* 0 à 8 = preset d'usine.
+*Program Change* 0 à 9 = preset d'usine.
 
 ---
 
-## Presets d'usine (9)
+## Presets d'usine (10)
 
-Molette sur le bouton MODE, ou clic droit → *Presets d'usine*, ou *Program Change* MIDI 0–8 / liste de programmes de l'hôte.
+Molette sur le bouton MODE, ou clic droit → *Presets d'usine*, ou *Program Change* MIDI 0–9 / liste de programmes de l'hôte.
 **CLEAN PLATE** est le premier preset et le son par défaut d'une nouvelle instance.
 
 | # | Nom | Caractère |
@@ -132,13 +132,14 @@ Molette sur le bouton MODE, ou clic droit → *Presets d'usine*, ou *Program Cha
 | 7 | AUTO FREEZE SWELL | freeze automatique, enchaînement doux |
 | 8 | DARK CATHEDRAL | cathédrale sombre et très longue |
 | 9 | TRUE DELAY | vrai delay propre (RVB MIX 0 : retard seul, 430 ms) |
+| 10 | FROZEN PLATE | freeze sur une plate simple mais profonde (TIME ≈ 5 s, VOICE 0 %) |
 
 
 ---
 
 ## Fenêtre
 
-- Ouverture à **50 %** (493 px de haut ; la largeur suit le ratio du visuel, 50 px de fond sombre de chaque côté de la pédale, mesurés à la taille par défaut). **Clic droit sur la pédale** → *Taille de la fenêtre* : Défaut (493 px), 60 %, 75 %, 100 % (986 px).
+- Ouverture à **50 %** (493 px de haut ; la largeur suit le ratio du visuel, 50 px de fond sombre de chaque côté de la pédale, mesurés à la taille par défaut). **Clic droit sur la pédale** → *Taille de la fenêtre* : Défaut, 60 %, 75 %, 100 %.
 - Redimensionnable à la souris par le coin, de 50 % (taille minimale = taille par défaut) à 150 % ; la taille est **mémorisée dans le projet**.
 
 ---
@@ -151,7 +152,7 @@ Assets/background.jpg            visuel Studio Wiga (recadré, fond sombre, coul
 Source/
   PluginProcessor.*              audio, MIDI, paramètres
   PluginEditor.*                 interface : boutons vectoriels, MODE, footswitch, ligne d'état
-  Params.h  Presets.h            paramètres, table MIDI, 9 presets d'usine
+  Params.h  Presets.h            paramètres, table MIDI, 10 presets d'usine
   dsp/                           moteurs DSP sans dépendance JUCE
     ShimmerEngine.h  Reverb.h  PitchShifter.h   (shimmer, FDN 8 lignes, octaves)
     FreezeEngine.h   FFT.h                      (freeze spectral à conservation de hauteur)
