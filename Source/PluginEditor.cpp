@@ -158,35 +158,23 @@ void FootSwitch::mouseDown (const MouseEvent& e)
     if (e.mods.isPopupMenu()) { owner.showModeMenu (this); return; }
     pressed = true;
     ignoreUp = false;
-    holdActive = false;
-    if (pendingToggle)
+    const auto now = Time::getMillisecondCounter();
+    const bool doubleClick = (now - lastDownMs) < 380;
+    lastDownMs = now;
+
+    if (doubleClick)
     {
-        // second appui rapide : arrête le freeze (annule le bascule on/bypass en attente)
-        stopTimer();
-        pendingToggle = false;
+        // double-clic : arrête le freeze
         owner.proc.postCommand (FreezeShimmerProcessor::cmdRelease);
         ignoreUp = true;
+        lastDownMs = 0;
     }
-    else
-        startTimer (350);   // au-delà : appui maintenu = freeze
-    repaint();
-}
-
-void FootSwitch::timerCallback()
-{
-    stopTimer();
-    if (pendingToggle)
-    {
-        // un seul clic : pédale active / bypass
-        pendingToggle = false;
-        owner.proc.postCommand (FreezeShimmerProcessor::cmdToggleEngage);
-    }
-    else if (pressed && ! ignoreUp)
+    else if (owner.choice ("fmode") != 2)
     {
         // maintenu : fige ce qui est entendu (LATCH : la capture reste après le relâchement ; MOMENT : seulement tant que l'on appuie)
-        holdActive = true;
         owner.proc.postCommand (FreezeShimmerProcessor::cmdHoldOn);
     }
+    repaint();
 }
 
 void FootSwitch::mouseUp (const MouseEvent& e)
@@ -195,17 +183,8 @@ void FootSwitch::mouseUp (const MouseEvent& e)
     pressed = false;
     if (! e.mods.isPopupMenu() && ! ignoreUp)
     {
-        if (holdActive)
-        {
-            holdActive = false;
-            owner.proc.postCommand (FreezeShimmerProcessor::cmdHoldOff);
-        }
-        else
-        {
-            stopTimer();
-            pendingToggle = true;
-            startTimer (300);   // fenêtre du double appui
-        }
+        if (owner.choice ("fmode") == 2) owner.proc.postCommand (FreezeShimmerProcessor::cmdToggleAuto);   // AUTO : arme / désarme
+        else                             owner.proc.postCommand (FreezeShimmerProcessor::cmdHoldOff);
     }
     repaint();
 }

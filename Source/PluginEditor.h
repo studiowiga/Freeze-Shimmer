@@ -66,7 +66,7 @@ private:
     bool longFired = false, blinkPhase = false;
 };
 
-class FootSwitch : public juce::Component, private juce::Timer
+class FootSwitch : public juce::Component
 {
 public:
     explicit FootSwitch (FreezeShimmerEditor& e) : owner (e) {}
@@ -75,9 +75,9 @@ public:
     void mouseDown (const juce::MouseEvent&) override;
     void mouseUp (const juce::MouseEvent&) override;
 private:
-    void timerCallback() override;
     FreezeShimmerEditor& owner;
-    bool pressed = false, ignoreUp = false, holdActive = false, pendingToggle = false;
+    bool pressed = false, ignoreUp = false;
+    juce::uint32 lastDownMs = 0;
 };
 
 class StatusLine : public juce::Component

@@ -62,7 +62,7 @@ sous Linux et publie le zip. Un tag `v1.0.0` crée une *Release* avec le zip.
   `Maj`+clic = mode freeze suivant (**LATCH · MOMENT · AUTO**) ; maintien ~1 s = bascule page A/B ;
   **molette** = preset suivant / précédent ; clic droit = menu complet (presets, taille, scène, mode, page, bypass, canal MIDI, table MIDI).
 - **LED unique** (au-dessus de MODE) : éteinte en bypass · **bleu fixe** pédale active · **bleu clignotant** freeze actif.
-- **Footswitch** (bas) : **1 clic** = pédale active / bypass · **appui maintenu** = freeze (voir ci-dessous) · **2 appuis rapides** = arrête le freeze.
+- **Footswitch** (bas) : **appui maintenu** = freeze · **double-clic** = arrête le freeze (voir ci-dessous). Bypass : clic droit → menu, ou CC 105.
 - **Double-clic** sur un bouton = valeur par défaut. Glisser verticalement, ou molette.
 
 ### Scènes (shimmer)
@@ -76,12 +76,12 @@ sous Linux et publie le zip. Un tag `v1.0.0` crée une *Release* avec le zip.
 Mode **LATCH** (par défaut) :
 1. **Maintenez** le footswitch : le plugin fige en continu ce qu'il entend (accord, note, nappe…).
 2. **Relâchez** : le son figé est maintenu à l'infini, vous jouez par-dessus (le signal direct passe normalement, niveau DRY).
-3. **Double appui** sur le footswitch : le freeze s'arrête (fondu réglé par SPEED).
+3. **Double-clic** sur le footswitch : le freeze s'arrête (fondu réglé par SPEED).
 Un nouvel appui ajoute une couche (jusqu'à LAYER = 4) ou glisse vers le nouveau son (GLISS).
 
 Autres modes (`Maj`+clic sur MODE) :
 - **MOMENT** : le son est figé seulement tant que l'on maintient le footswitch.
-- **AUTO** : capture automatique à chaque nouvelle attaque détectée ; GLISS règle le morphing d'une note à la suivante.
+- **AUTO** : capture automatique à chaque nouvelle attaque détectée ; GLISS règle le morphing d'une note à la suivante. Un clic sur le footswitch arme / désarme l'auto-capture.
 
 SPEED = attaque / relâchement du freeze · LAYER = nombre de couches · GLISS = durée du fondu entre deux freezes.
 
@@ -117,6 +117,8 @@ voir *MIDI learn* / mapping de paramètres de votre DAW). Canal réglable (menu 
 ---
 
 ## Presets d'usine (12)
+
+Preset par défaut à l'ouverture d'une nouvelle instance : **CLEAN PLATE**.
 
 Molette sur le bouton MODE, ou clic droit → *Presets d'usine*, ou *Program Change* MIDI / liste de programmes de l'hôte.
 
