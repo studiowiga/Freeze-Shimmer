@@ -1,0 +1,20 @@
+Freeze Shimmer VST3 - Studio Wiga
+Copyright (C) 2026 Studio Wiga
+
+Ce programme est un logiciel libre : vous pouvez le redistribuer et/ou le modifier
+selon les termes de la GNU General Public License telle que publiée par la
+Free Software Foundation, version 3 de la licence, ou (à votre choix) toute
+version ultérieure.
+
+Ce programme est distribué dans l'espoir qu'il sera utile, mais SANS AUCUNE
+GARANTIE ; sans même la garantie implicite de COMMERCIALISATION ou
+D'ADAPTATION À UN OBJET PARTICULIER. Voir la GNU General Public License pour
+plus de détails : https://www.gnu.org/licenses/gpl-3.0.html
+
+Ce projet utilise le framework JUCE (https://juce.com) sous licence AGPLv3/GPLv3.
+
+Exception : le fichier Assets/background.jpg (visuel "Freeze Shimmer" de Studio Wiga)
+n'est pas couvert par la GPL ; tous droits réservés à son auteur.
+
+Le texte complet de la licence GPL-3.0 est disponible sur :
+https://www.gnu.org/licenses/gpl-3.0.txt  (à ajouter tel quel dans ce fichier avant publication si souhaité).
