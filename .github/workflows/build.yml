@@ -1,0 +1,59 @@
+name: Build Freeze Shimmer
+
+on:
+  push:
+    branches: [ main, master ]
+    tags: [ 'v*' ]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  dsp-test:
+    name: Test DSP (Linux)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compile and run the DSP tests
+        run: |
+          g++ -O2 -std=c++17 -ISource/dsp tests/dsp_test.cpp -o dsp_test
+          mkdir -p test-audio
+          ./dsp_test test-audio
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dsp-test-audio
+          path: test-audio/*.wav
+
+  windows-vst3:
+    name: VST3 Windows x64
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure
+        run: cmake -S . -B build -G "Visual Studio 17 2022" -A x64
+
+      - name: Build (Release)
+        run: cmake --build build --config Release --parallel
+
+      - name: Package
+        shell: pwsh
+        run: |
+          $vst3 = Get-ChildItem -Path build -Recurse -Directory -Filter "Freeze Shimmer.vst3" | Select-Object -First 1
+          if (-not $vst3) { throw "Freeze Shimmer.vst3 introuvable" }
+          New-Item -ItemType Directory -Path dist | Out-Null
+          Copy-Item $vst3.FullName -Destination dist -Recurse
+          Copy-Item scripts/Install-FreezeShimmer.ps1 -Destination dist
+          $exe = Get-ChildItem -Path build -Recurse -Filter "Freeze Shimmer.exe" | Select-Object -First 1
+          if ($exe) { Copy-Item $exe.FullName -Destination dist }
+          Compress-Archive -Path dist/* -DestinationPath FreezeShimmer-win64.zip
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: FreezeShimmer-win64
+          path: FreezeShimmer-win64.zip
+
+      - name: Publish release (tags v*)
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: FreezeShimmer-win64.zip
