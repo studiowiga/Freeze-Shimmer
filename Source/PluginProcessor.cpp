@@ -23,7 +23,7 @@ FreezeShimmerProcessor::FreezeShimmerProcessor()
 
     for (auto* v : { &wetL, &wetR, &shL, &shR, &frL, &frR }) v->assign ((size_t) kChunk, 0.0f);
 
-    applyPreset (2);   // son par défaut : CLEAN PLATE (écrasé par l'état sauvegardé du projet)
+    applyPreset (0);   // son par défaut : CLEAN PLATE (premier preset) (écrasé par l'état sauvegardé du projet)
 }
 
 bool FreezeShimmerProcessor::isBusesLayoutSupported (const BusesLayout& l) const

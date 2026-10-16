@@ -91,7 +91,7 @@ En bypass, les queues de réverb s'éteignent naturellement.
 ### Ligne d'état
 
 Sous l'encadré : dernier paramètre touché et sa valeur lisible (%, s, ms, Hz…), état *scène · mode · page · FROZEN*,
-et à droite la valeur **MIDI** correspondante (`CC24 = 70`). Elle passe en vert quand la valeur vient d'un message MIDI entrant.
+et à droite la valeur **MIDI** correspondante (`CC24 = 70`). Elle passe en vert quand la valeur vient d'un message MIDI entrant. La valeur affichée à gauche prend la couleur de l'étiquette du potard : blanc (page A), bleu (page B : RVB MIX, DELAY, LAYER, DEPTH, RATE).
 
 ---
 
@@ -112,36 +112,33 @@ voir *MIDI learn* / mapping de paramètres de votre DAW). Canal réglable (menu 
 | 27 | LAYER | 104 · **64** | Footswitch (≥ 64 enfoncé) — 64 = pédale de sustain |
 | 105 | Effet actif ≥ 64 / bypass | 106 | Relâche le freeze |
 
-*Program Change* 0 à 11 = preset d'usine.
+*Program Change* 0 à 8 = preset d'usine.
 
 ---
 
-## Presets d'usine (12)
+## Presets d'usine (9)
 
-Preset par défaut à l'ouverture d'une nouvelle instance : **CLEAN PLATE**.
-
-Molette sur le bouton MODE, ou clic droit → *Presets d'usine*, ou *Program Change* MIDI / liste de programmes de l'hôte.
+Molette sur le bouton MODE, ou clic droit → *Presets d'usine*, ou *Program Change* MIDI 0–8 / liste de programmes de l'hôte.
+**CLEAN PLATE** est le premier preset et le son par défaut d'une nouvelle instance.
 
 | # | Nom | Caractère |
 |---|---|---|
-| 1 | GLACIAL PAD | shimmer long, nappe cristalline |
-| 2 | AURORA STRINGS | octaves + cordes éthérées |
-| 3 | CLEAN PLATE | plate courte et propre, sans shimmer |
-| 4 | INFINITE COSMOS | tank infini, shimmer qui n'en finit pas |
-| 5 | OFF-WORLD SYNTH | textures de synthé vintage, modulation lente |
-| 6 | TAPE ECHO SHIMMER | écho modulé + shimmer |
-| 7 | ETHERDUST GLITCH | stutters aléatoires scintillants |
-| 8 | FROZEN DRONE | freeze 4 couches, drone qui glisse |
-| 9 | AUTO FREEZE SWELL | freeze automatique, enchaînement doux |
-| 10 | DARK CATHEDRAL | cathédrale sombre et très longue |
-| 11 | SPARKLE DELAY | delay brillant, shimmer aigu |
-| 12 | MOMENT RISER | freeze tant que l'on appuie, montée rapide |
+| 1 | CLEAN PLATE | plate courte et propre, sans shimmer |
+| 2 | GLACIAL PAD | shimmer long, nappe cristalline (VOICE 0 %) |
+| 3 | INFINITE COSMOS | shimmer ample, TIME 6,5 s |
+| 4 | TAPE ECHO SHIMMER | écho modulé 765 ms + shimmer, RVB MIX 50 % |
+| 5 | ETHERDUST GLITCH | stutters aléatoires scintillants |
+| 6 | FROZEN DRONE | freeze 4 couches, drone qui glisse |
+| 7 | AUTO FREEZE SWELL | freeze automatique, enchaînement doux |
+| 8 | DARK CATHEDRAL | cathédrale sombre et très longue |
+| 9 | TRUE DELAY | vrai delay propre (RVB MIX 0 : retard seul, 430 ms) |
+
 
 ---
 
 ## Fenêtre
 
-- Ouverture à **50 %** (493 px de haut ; la largeur suit le ratio du visuel, 50 px de fond sombre de chaque côté de la pédale). Clic droit sur le bouton MODE ou le footswitch → *Taille de la fenêtre* : 50 %, 75 %, 100 % (986 px).
+- Ouverture à **50 %** (493 px de haut ; la largeur suit le ratio du visuel, 50 px de fond sombre de chaque côté de la pédale, mesurés à la taille par défaut). **Clic droit sur la pédale** → *Taille de la fenêtre* : Défaut (493 px), 60 %, 75 %, 100 % (986 px).
 - Redimensionnable à la souris par le coin, de 50 % (taille minimale = taille par défaut) à 150 % ; la taille est **mémorisée dans le projet**.
 
 ---
@@ -154,7 +151,7 @@ Assets/background.jpg            visuel Studio Wiga (recadré, fond sombre, coul
 Source/
   PluginProcessor.*              audio, MIDI, paramètres
   PluginEditor.*                 interface : boutons vectoriels, MODE, footswitch, ligne d'état
-  Params.h  Presets.h            paramètres, table MIDI, 12 presets d'usine
+  Params.h  Presets.h            paramètres, table MIDI, 9 presets d'usine
   dsp/                           moteurs DSP sans dépendance JUCE
     ShimmerEngine.h  Reverb.h  PitchShifter.h   (shimmer, FDN 8 lignes, octaves)
     FreezeEngine.h   FFT.h                      (freeze spectral à conservation de hauteur)
@@ -172,7 +169,7 @@ Tests DSP en local (Linux/macOS/WSL) : `g++ -O2 -std=c++17 -ISource/dsp tests/ds
 - **Shimmer** : réverb FDN 8 lignes (matrice de Householder) avec diffusion d'entrée, amortissement, modulation ; l'octave supérieure est
   réinjectée dans la boucle (pitch shifter granulaire). Gain de boucle automatiquement réduit quand TIME augmente (pas d'auto-oscillation) ; TIME max = tank figé.
 - Latence : aucune déclarée (le freeze met 1-3 trames de 21 ms à atteindre son plein niveau).
-- Interface redimensionnable à ratio fixe (≈ 0,66).
+- Interface redimensionnable à ratio fixe (≈ 0,81).
 
 ## Licence
 

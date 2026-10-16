@@ -5,16 +5,16 @@
 // Géométrie de l'illustration (pixels de l'image de fond 1250 x 2000)
 namespace art
 {
-constexpr float W = 1331.0f, H = 2026.0f;
+constexpr float W = 1641.0f, H = 2026.0f;
 struct Circle { float x, y, r; };
-constexpr Circle knobs[7] = { { 362, 195, 118 }, { 960, 196, 118 }, { 331, 513, 116 }, { 665, 508, 113 },
-                              { 993, 513, 116 }, { 328, 832, 116 }, { 991, 833, 116 } };
-constexpr Circle modeBtn    = { 666, 104, 46 };
-constexpr Circle footswitch = { 666, 1741, 118 };
-constexpr float statusX = 278, statusY = 1498, statusW = 776, statusH = 48;
+constexpr Circle knobs[7] = { { 517, 195, 118 }, { 1115, 196, 118 }, { 486, 513, 116 }, { 820, 508, 113 },
+                              { 1148, 513, 116 }, { 483, 832, 116 }, { 1146, 833, 116 } };
+constexpr Circle modeBtn    = { 821, 104, 46 };
+constexpr Circle footswitch = { 821, 1741, 118 };
+constexpr float statusX = 433, statusY = 1498, statusW = 776, statusH = 48;
 
 // tailles de fenêtre : 100 % = 986 px de haut ; ouverture par défaut = 50 % (493 px)
-constexpr int heightPct50 = 493, heightPct75 = 740, heightPct100 = 986, heightMax = 1479;
+constexpr int heightPct50 = 493, heightPct60 = 592, heightPct75 = 740, heightPct100 = 986, heightMax = 1479;
 }
 
 //==============================================================================
@@ -100,6 +100,7 @@ public:
 
     void paint (juce::Graphics&) override;
     void resized() override;
+    void mouseDown (const juce::MouseEvent&) override;
 
     FreezeShimmerProcessor& proc;
 
@@ -117,6 +118,7 @@ public:
     void loadPreset (int index);
     void setWindowHeight (int h);
     void showModeMenu (juce::Component* target);
+    void showSizeMenu (juce::Component* target);
     void showMidiMap();
     int  knobParamIndex (int knob) const;          // indice dans fsp::kKnobs du paramètre actuellement lié
     juce::Colour sceneColour() const;

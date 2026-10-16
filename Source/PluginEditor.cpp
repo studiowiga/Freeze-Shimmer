@@ -218,8 +218,15 @@ void StatusLine::paint (Graphics& g)
     const Colour txt (0xffd7efff), accent (0xff6fe3ff), dim (0xff86a6bd);
     const float fs1 = jmax (9.0f, h * 0.50f);
 
+    // couleur de la valeur = couleur de l'étiquette sous le potard (blanc : page A, bleu : page B)
+    bool blueLabel = false;
+    if (idx >= 0 && idx < fsp::kNumKnobs)
+    {
+        const juce::String kid (fsp::kKnobs[idx].id);
+        blueLabel = (kid == "rvbmix" || kid == "delay" || kid == "layer" || kid == "depth" || kid == "rate");
+    }
     g.setFont (makeFont (fs1, true));
-    g.setColour (txt);
+    g.setColour (blueLabel ? accent : Colour (0xffffffff));
     auto inner = b.reduced (h * 0.45f, 0.0f);
     g.drawText (left, inner.removeFromLeft (inner.getWidth() * (getWidth() > 300 ? 0.36f : 0.5f)), Justification::centredLeft, false);
 
@@ -258,10 +265,12 @@ FreezeShimmerEditor::FreezeShimmerEditor (FreezeShimmerProcessor& p)
         knob[i].setLookAndFeel (&look);
         addAndMakeVisible (knob[i]);
     }
+    for (int i = 0; i < 6; ++i) knob[i].onRightClick = [this, i] { showSizeMenu (&knob[i]); };
     knob[6].onRightClick = [this] { showKnob7Menu(); };
     addAndMakeVisible (modeButton);
     addAndMakeVisible (footSwitch);
     addAndMakeVisible (status);
+    status.setInterceptsMouseClicks (false, false);
 
     for (int i = 0; i < fsp::kNumKnobs; ++i) proc.apvts.addParameterListener (fsp::kKnobs[i].id, this);
     for (auto id : { "scene", "fmode", "engage" }) proc.apvts.addParameterListener (id, this);
@@ -396,9 +405,10 @@ void FreezeShimmerEditor::showModeMenu (Component* target)
     for (int i = 0; i < fsp::kNumPresets; ++i)
         presets.addItem (200 + i, String (i + 1) + "  " + fsp::kPresets[i].name, true, proc.presetIndex.load() == i);
     const int curH = getHeight();
-    sizes.addItem (301, "50 %  (493 px)",  true, std::abs (curH - art::heightPct50)  < 8);
-    sizes.addItem (302, "75 %  (740 px)",  true, std::abs (curH - art::heightPct75)  < 8);
-    sizes.addItem (303, "100 %  (986 px)", true, std::abs (curH - art::heightPct100) < 8);
+    sizes.addItem (301, "Defaut  (493 px)", true, std::abs (curH - art::heightPct50)  < 8);
+    sizes.addItem (304, "60 %  (592 px)",   true, std::abs (curH - art::heightPct60)  < 8);
+    sizes.addItem (302, "75 %  (740 px)",   true, std::abs (curH - art::heightPct75)  < 8);
+    sizes.addItem (303, "100 %  (986 px)",  true, std::abs (curH - art::heightPct100) < 8);
     m.addSubMenu ("Presets d'usine", presets);
     m.addSubMenu ("Taille de la fenetre", sizes);
     m.addSeparator();
@@ -426,9 +436,33 @@ void FreezeShimmerEditor::showModeMenu (Component* target)
         else if (r >= 100 && r <= 116) setChoice ("midichan", r - 100);
         else if (r >= 200 && r < 200 + fsp::kNumPresets) loadPreset (r - 200);
         else if (r == 301) setWindowHeight (art::heightPct50);
+        else if (r == 304) setWindowHeight (art::heightPct60);
         else if (r == 302) setWindowHeight (art::heightPct75);
         else if (r == 303) setWindowHeight (art::heightPct100);
     });
+}
+
+void FreezeShimmerEditor::showSizeMenu (Component* target)
+{
+    const int curH = getHeight();
+    PopupMenu m;
+    m.addSectionHeader ("Taille de la fenetre");
+    m.addItem (301, "Defaut  (493 px)", true, std::abs (curH - art::heightPct50)  < 8);
+    m.addItem (304, "60 %  (592 px)",   true, std::abs (curH - art::heightPct60)  < 8);
+    m.addItem (302, "75 %  (740 px)",   true, std::abs (curH - art::heightPct75)  < 8);
+    m.addItem (303, "100 %  (986 px)",  true, std::abs (curH - art::heightPct100) < 8);
+    m.showMenuAsync (PopupMenu::Options().withTargetComponent (target), [this] (int r)
+    {
+        if (r == 301) setWindowHeight (art::heightPct50);
+        else if (r == 304) setWindowHeight (art::heightPct60);
+        else if (r == 302) setWindowHeight (art::heightPct75);
+        else if (r == 303) setWindowHeight (art::heightPct100);
+    });
+}
+
+void FreezeShimmerEditor::mouseDown (const MouseEvent& e)
+{
+    if (e.mods.isPopupMenu()) showSizeMenu (this);
 }
 
 void FreezeShimmerEditor::showMidiMap()
@@ -442,7 +476,7 @@ void FreezeShimmerEditor::showMidiMap()
       << "\nCC " << fsp::kCcSustain << "  =  Pedale de sustain = footswitch"
       << "\nCC " << fsp::kCcEngage  << "  =  Effet actif (>= 64) / bypass"
       << "\nCC " << fsp::kCcRelease << "  =  Relache le freeze"
-      << "\nProgram Change 0-11  =  Preset d'usine";
+      << "\nProgram Change 0-8  =  Preset d'usine";
     AlertWindow::showMessageBoxAsync (MessageBoxIconType::InfoIcon, "Freeze Shimmer - table MIDI", t);
 }
 
