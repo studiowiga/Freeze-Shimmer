@@ -405,12 +405,12 @@ void FreezeShimmerEditor::showModeMenu (Component* target)
     for (int i = 0; i < fsp::kNumPresets; ++i)
         presets.addItem (200 + i, String (i + 1) + "  " + fsp::kPresets[i].name, true, proc.presetIndex.load() == i);
     const int curH = getHeight();
-    sizes.addItem (301, "Defaut", true, std::abs (curH - art::heightPct50)  < 8);
+    sizes.addItem (301, "Default", true, std::abs (curH - art::heightPct50)  < 8);
     sizes.addItem (304, "60 %",   true, std::abs (curH - art::heightPct60)  < 8);
     sizes.addItem (302, "75 %",   true, std::abs (curH - art::heightPct75)  < 8);
     sizes.addItem (303, "100 %",  true, std::abs (curH - art::heightPct100) < 8);
     m.addSubMenu ("Presets d'usine", presets);
-    m.addSubMenu ("Taille de la fenetre", sizes);
+    m.addSubMenu ("Window size", sizes);
     m.addSeparator();
     m.addSubMenu ("Scene (shimmer)", scenes);
     m.addSubMenu ("Mode freeze", modes);
@@ -446,8 +446,8 @@ void FreezeShimmerEditor::showSizeMenu (Component* target)
 {
     const int curH = getHeight();
     PopupMenu m;
-    m.addSectionHeader ("Taille de la fenetre");
-    m.addItem (301, "Defaut", true, std::abs (curH - art::heightPct50)  < 8);
+    m.addSectionHeader ("Window size");
+    m.addItem (301, "Default", true, std::abs (curH - art::heightPct50)  < 8);
     m.addItem (304, "60 %",   true, std::abs (curH - art::heightPct60)  < 8);
     m.addItem (302, "75 %",   true, std::abs (curH - art::heightPct75)  < 8);
     m.addItem (303, "100 %",  true, std::abs (curH - art::heightPct100) < 8);
