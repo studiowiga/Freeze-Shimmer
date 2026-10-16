@@ -5,13 +5,13 @@
 // Géométrie de l'illustration (pixels de l'image de fond 1250 x 2000)
 namespace art
 {
-constexpr float W = 1279.0f, H = 2026.0f;
+constexpr float W = 1331.0f, H = 2026.0f;
 struct Circle { float x, y, r; };
-constexpr Circle knobs[7] = { { 336, 195, 118 }, { 934, 196, 118 }, { 305, 513, 116 }, { 639, 508, 113 },
-                              { 967, 513, 116 }, { 302, 832, 116 }, { 965, 833, 116 } };
-constexpr Circle modeBtn    = { 640, 104, 46 };
-constexpr Circle footswitch = { 640, 1741, 118 };
-constexpr float statusX = 252, statusY = 1498, statusW = 776, statusH = 48;
+constexpr Circle knobs[7] = { { 362, 195, 118 }, { 960, 196, 118 }, { 331, 513, 116 }, { 665, 508, 113 },
+                              { 993, 513, 116 }, { 328, 832, 116 }, { 991, 833, 116 } };
+constexpr Circle modeBtn    = { 666, 104, 46 };
+constexpr Circle footswitch = { 666, 1741, 118 };
+constexpr float statusX = 278, statusY = 1498, statusW = 776, statusH = 48;
 
 // tailles de fenêtre : 100 % = 986 px de haut ; ouverture par défaut = 50 % (493 px)
 constexpr int heightPct50 = 493, heightPct75 = 740, heightPct100 = 986, heightMax = 1479;

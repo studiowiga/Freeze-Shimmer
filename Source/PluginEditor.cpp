@@ -486,6 +486,13 @@ void FreezeShimmerEditor::paint (Graphics& g)
 
 void FreezeShimmerEditor::resized()
 {
+    // jamais plus petit que la taille par défaut (50 %), quelle que soit la demande de l'hôte
+    const int minW = roundToInt ((double) art::heightPct50 * (double) art::W / (double) art::H);
+    if (getHeight() < art::heightPct50 || getWidth() < minW)
+    {
+        setSize (minW, art::heightPct50);
+        return;
+    }
     proc.uiHeight.store (getHeight());
     const float s = (float) getWidth() / art::W;
     auto place = [s] (Component& c, const art::Circle& k, float scale = 1.0f)

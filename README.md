@@ -141,8 +141,8 @@ Molette sur le bouton MODE, ou clic droit → *Presets d'usine*, ou *Program Cha
 
 ## Fenêtre
 
-- Ouverture à **50 %** (493 px de haut ; la largeur suit le ratio du visuel). Clic droit sur le bouton MODE ou le footswitch → *Taille de la fenêtre* : 50 %, 75 %, 100 % (986 px).
-- Redimensionnable à la souris par le coin, de 50 % à 150 % ; la taille est **mémorisée dans le projet**.
+- Ouverture à **50 %** (493 px de haut ; la largeur suit le ratio du visuel, 50 px de fond sombre de chaque côté de la pédale). Clic droit sur le bouton MODE ou le footswitch → *Taille de la fenêtre* : 50 %, 75 %, 100 % (986 px).
+- Redimensionnable à la souris par le coin, de 50 % (taille minimale = taille par défaut) à 150 % ; la taille est **mémorisée dans le projet**.
 
 ---
 
@@ -172,7 +172,7 @@ Tests DSP en local (Linux/macOS/WSL) : `g++ -O2 -std=c++17 -ISource/dsp tests/ds
 - **Shimmer** : réverb FDN 8 lignes (matrice de Householder) avec diffusion d'entrée, amortissement, modulation ; l'octave supérieure est
   réinjectée dans la boucle (pitch shifter granulaire). Gain de boucle automatiquement réduit quand TIME augmente (pas d'auto-oscillation) ; TIME max = tank figé.
 - Latence : aucune déclarée (le freeze met 1-3 trames de 21 ms à atteindre son plein niveau).
-- Interface redimensionnable à ratio fixe (≈ 0,63).
+- Interface redimensionnable à ratio fixe (≈ 0,66).
 
 ## Licence
 
