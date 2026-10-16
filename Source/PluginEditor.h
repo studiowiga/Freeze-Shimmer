@@ -5,13 +5,13 @@
 // Géométrie de l'illustration (pixels de l'image de fond 1250 x 2000)
 namespace art
 {
-constexpr float W = 1006.0f, H = 2009.0f;
+constexpr float W = 1279.0f, H = 2026.0f;
 struct Circle { float x, y, r; };
-constexpr Circle knobs[7] = { { 199, 183, 118 }, { 798, 183, 118 }, { 169, 501, 116 }, { 500, 493, 113 },
-                              { 829, 501, 116 }, { 166, 820, 116 }, { 829, 821, 116 } };
-constexpr Circle modeBtn    = { 500, 93, 46 };
-constexpr Circle footswitch = { 500, 1728, 118 };
-constexpr float statusX = 112, statusY = 1472, statusW = 776, statusH = 56;
+constexpr Circle knobs[7] = { { 336, 195, 118 }, { 934, 196, 118 }, { 305, 513, 116 }, { 639, 508, 113 },
+                              { 967, 513, 116 }, { 302, 832, 116 }, { 965, 833, 116 } };
+constexpr Circle modeBtn    = { 640, 104, 46 };
+constexpr Circle footswitch = { 640, 1741, 118 };
+constexpr float statusX = 252, statusY = 1498, statusW = 776, statusH = 48;
 
 // tailles de fenêtre : 100 % = 986 px de haut ; ouverture par défaut = 50 % (493 px)
 constexpr int heightPct50 = 493, heightPct75 = 740, heightPct100 = 986, heightMax = 1479;
@@ -66,7 +66,7 @@ private:
     bool longFired = false, blinkPhase = false;
 };
 
-class FootSwitch : public juce::Component
+class FootSwitch : public juce::Component, private juce::Timer
 {
 public:
     explicit FootSwitch (FreezeShimmerEditor& e) : owner (e) {}
@@ -75,9 +75,9 @@ public:
     void mouseDown (const juce::MouseEvent&) override;
     void mouseUp (const juce::MouseEvent&) override;
 private:
+    void timerCallback() override;
     FreezeShimmerEditor& owner;
-    bool pressed = false, ignoreUp = false;
-    juce::uint32 lastDownMs = 0;
+    bool pressed = false, ignoreUp = false, holdActive = false, pendingToggle = false;
 };
 
 class StatusLine : public juce::Component

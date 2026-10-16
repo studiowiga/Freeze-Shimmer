@@ -5,8 +5,7 @@ Plugin d'effet **VST3** « Frozen Cosmic Reverb » par **Studio Wiga**, qui réu
 - un **shimmer / cosmic reverb** inspiré de la *Pico Shimmer* (3 scènes, retard, modulation) ;
 - un **freeze / sound retainer** inspiré de la *Pico Deep Freeze* (sustain infini, couches, glissando).
 
-L'interface reprend votre visuel `proto_freeze_shimmer.png` (recadré sur la pédale, fond sombre, couleurs rehaussées, mentions
-**OUTPUT** à gauche et **INPUT** à droite) ; les 7 boutons sont redessinés en vectoriel (code), et une ligne d'état discrète est
+L'interface reprend votre visuel `proto_freeze_shimmer.png` (fond sombre, jacks et mentions **OUTPUT** à gauche / **INPUT** à droite conservés) ; les 7 boutons sont redessinés en vectoriel (code), et une ligne d'état discrète est
 placée sous l'encadré « FREEZE SHIMMER ».
 
 > **Précision importante.** Les algorithmes des pédales Electro-Harmonix sont propriétaires, et le schéma fourni
@@ -60,9 +59,10 @@ sous Linux et publie le zip. Un tag `v1.0.0` crée une *Release* avec le zip.
 | droite 2 (menu) | **GLISS** — fondu entre deux freezes (clic droit sur le bouton → *GLISS*) | |
 
 - **Bouton MODE** (haut) : clic = scène suivante (**INTERGALACTIC** vert · **OFF-WORLD** orange · **ETHERDUST** rouge) ;
-  `Maj`+clic = mode freeze suivant (**LATCH · MOMENT · AUTO**) ; maintien ~1 s = bascule page A/B (la LED clignote en bleu en page B) ;
+  `Maj`+clic = mode freeze suivant (**LATCH · MOMENT · AUTO**) ; maintien ~1 s = bascule page A/B ;
   **molette** = preset suivant / précédent ; clic droit = menu complet (presets, taille, scène, mode, page, bypass, canal MIDI, table MIDI).
-- **Footswitch** (bas) — voir « Freeze » ci-dessous ; un halo cyan indique qu'un son est figé.
+- **LED unique** (au-dessus de MODE) : éteinte en bypass · **bleu fixe** pédale active · **bleu clignotant** freeze actif.
+- **Footswitch** (bas) : **1 clic** = pédale active / bypass · **appui maintenu** = freeze (voir ci-dessous) · **2 appuis rapides** = arrête le freeze.
 - **Double-clic** sur un bouton = valeur par défaut. Glisser verticalement, ou molette.
 
 ### Scènes (shimmer)
@@ -76,13 +76,12 @@ sous Linux et publie le zip. Un tag `v1.0.0` crée une *Release* avec le zip.
 Mode **LATCH** (par défaut) :
 1. **Maintenez** le footswitch : le plugin fige en continu ce qu'il entend (accord, note, nappe…).
 2. **Relâchez** : le son figé est maintenu à l'infini, vous jouez par-dessus (le signal direct passe normalement, niveau DRY).
-3. **Double-clic** sur le footswitch : le freeze s'arrête (fondu réglé par SPEED).
+3. **Double appui** sur le footswitch : le freeze s'arrête (fondu réglé par SPEED).
 Un nouvel appui ajoute une couche (jusqu'à LAYER = 4) ou glisse vers le nouveau son (GLISS).
 
 Autres modes (`Maj`+clic sur MODE) :
 - **MOMENT** : le son est figé seulement tant que l'on maintient le footswitch.
 - **AUTO** : capture automatique à chaque nouvelle attaque détectée ; GLISS règle le morphing d'une note à la suivante.
-  Un clic sur le footswitch arme / désarme l'auto-capture.
 
 SPEED = attaque / relâchement du freeze · LAYER = nombre de couches · GLISS = durée du fondu entre deux freezes.
 
@@ -171,7 +170,7 @@ Tests DSP en local (Linux/macOS/WSL) : `g++ -O2 -std=c++17 -ISource/dsp tests/ds
 - **Shimmer** : réverb FDN 8 lignes (matrice de Householder) avec diffusion d'entrée, amortissement, modulation ; l'octave supérieure est
   réinjectée dans la boucle (pitch shifter granulaire). Gain de boucle automatiquement réduit quand TIME augmente (pas d'auto-oscillation) ; TIME max = tank figé.
 - Latence : aucune déclarée (le freeze met 1-3 trames de 21 ms à atteindre son plein niveau).
-- Interface redimensionnable à ratio fixe (≈ 1:2).
+- Interface redimensionnable à ratio fixe (≈ 0,63).
 
 ## Licence
 

@@ -85,21 +85,18 @@ bool ModeButton::hitTest (int x, int y)
 
 void ModeButton::paint (Graphics& g)
 {
+    // LED unique : éteinte en bypass, bleu fixe pédale active, bleu clignotant quand le freeze est actif
+    if (! owner.getBool ("engage")) return;
+    const bool frozen = owner.proc.frozenState.load();
+    if (frozen && ! blinkPhase) return;
     const auto c = getLocalBounds().toFloat().getCentre();
     const float R = (float) getWidth() * 0.5f;
-    const bool engaged = owner.getBool ("engage");
-    const bool pageB = owner.page() == 1;
-    Colour led = owner.sceneColour();
-    if (pageB && blinkPhase) led = kBlue;
-    const float a = engaged ? 1.0f : 0.35f;
-
-    // halo
-    g.setGradientFill (ColourGradient (led.withAlpha (0.55f * a), c.x, c.y, led.withAlpha (0.0f), c.x, c.y + R, true));
+    const Colour led = kBlue;
+    g.setGradientFill (ColourGradient (led.withAlpha (0.55f), c.x, c.y, led.withAlpha (0.0f), c.x, c.y + R, true));
     g.fillEllipse (Rectangle<float> (R * 2.0f, R * 2.0f).withCentre (c));
-    // capuchon éclairé
     const float cr = R * 0.66f;
-    g.setGradientFill (ColourGradient (led.brighter (0.6f).withAlpha (0.80f * a), c.x - cr * 0.2f, c.y - cr * 0.3f,
-                                       led.withAlpha (0.35f * a), c.x, c.y + cr, true));
+    g.setGradientFill (ColourGradient (led.brighter (0.6f).withAlpha (0.80f), c.x - cr * 0.2f, c.y - cr * 0.3f,
+                                       led.withAlpha (0.35f), c.x, c.y + cr, true));
     g.fillEllipse (Rectangle<float> (cr * 2.0f, cr * 2.0f).withCentre (c));
 }
 
@@ -161,23 +158,35 @@ void FootSwitch::mouseDown (const MouseEvent& e)
     if (e.mods.isPopupMenu()) { owner.showModeMenu (this); return; }
     pressed = true;
     ignoreUp = false;
-    const auto now = Time::getMillisecondCounter();
-    const bool doubleClick = (now - lastDownMs) < 380;
-    lastDownMs = now;
-
-    if (doubleClick)
+    holdActive = false;
+    if (pendingToggle)
     {
-        // double-clic : arrête le freeze
+        // second appui rapide : arrête le freeze (annule le bascule on/bypass en attente)
+        stopTimer();
+        pendingToggle = false;
         owner.proc.postCommand (FreezeShimmerProcessor::cmdRelease);
         ignoreUp = true;
-        lastDownMs = 0;
     }
-    else if (owner.choice ("fmode") != 2)
+    else
+        startTimer (350);   // au-delà : appui maintenu = freeze
+    repaint();
+}
+
+void FootSwitch::timerCallback()
+{
+    stopTimer();
+    if (pendingToggle)
+    {
+        // un seul clic : pédale active / bypass
+        pendingToggle = false;
+        owner.proc.postCommand (FreezeShimmerProcessor::cmdToggleEngage);
+    }
+    else if (pressed && ! ignoreUp)
     {
         // maintenu : fige ce qui est entendu (LATCH : la capture reste après le relâchement ; MOMENT : seulement tant que l'on appuie)
+        holdActive = true;
         owner.proc.postCommand (FreezeShimmerProcessor::cmdHoldOn);
     }
-    repaint();
 }
 
 void FootSwitch::mouseUp (const MouseEvent& e)
@@ -186,8 +195,17 @@ void FootSwitch::mouseUp (const MouseEvent& e)
     pressed = false;
     if (! e.mods.isPopupMenu() && ! ignoreUp)
     {
-        if (owner.choice ("fmode") == 2) owner.proc.postCommand (FreezeShimmerProcessor::cmdToggleAuto);   // AUTO : arme / désarme
-        else                             owner.proc.postCommand (FreezeShimmerProcessor::cmdHoldOff);
+        if (holdActive)
+        {
+            holdActive = false;
+            owner.proc.postCommand (FreezeShimmerProcessor::cmdHoldOff);
+        }
+        else
+        {
+            stopTimer();
+            pendingToggle = true;
+            startTimer (300);   // fenêtre du double appui
+        }
     }
     repaint();
 }
@@ -475,6 +493,7 @@ void FreezeShimmerEditor::timerCallback()
     const int pr = proc.presetIndex.load();
     if (pr != lastPresetSeen) { lastPresetSeen = pr; lastIndex.store (104); lastValue.store ((float) pr); lastFromMidi.store (false); }
     modeButton.setBlink ((Time::getMillisecondCounter() / 350) % 2 == 0);
+    modeButton.repaint();
     status.repaint();
     footSwitch.repaint();
 }
