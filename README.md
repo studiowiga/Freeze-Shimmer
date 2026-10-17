@@ -1,4 +1,4 @@
-# Freeze Shimmer — VST3 (Windows 11)
+# Freeze Shimmer — VST3 (Windows 11 & macOS)
 
 Plugin d'effet **VST3** « Frozen Cosmic Reverb » par **Studio Wiga**, qui réunit dans une seule interface :
 
@@ -25,9 +25,21 @@ placée sous l'encadré « FREEZE SHIMMER ».
 
 Un exécutable autonome (`Freeze Shimmer.exe`) est aussi fourni pour essayer le plugin sans DAW.
 
+### macOS (Apple Silicon et Intel)
+
+1. Récupérez `FreezeShimmer-macos.zip` dans **Actions → dernier build → Artifacts** (ou **Releases**). Le binaire est **universel** (arm64 + x86_64), macOS 10.13 minimum.
+2. Dézippez, puis au choix : double-cliquez sur `FreezeShimmer-VST3.pkg` (installation pour tous les utilisateurs dans `/Library/Audio/Plug-Ins/VST3`), ou sur `install-freezeshimmer-mac.command` : il copie `Freeze Shimmer.vst3` dans `~/Library/Audio/Plug-Ins/VST3`, retire la quarantaine et applique une signature locale.
+   (Installation manuelle : copiez le dossier `Freeze Shimmer.vst3` dans `~/Library/Audio/Plug-Ins/VST3` ou `/Library/Audio/Plug-Ins/VST3`.)
+3. Relancez le scan des plugins de votre DAW.
+
+> Le plugin n'est pas notarisé Apple : si macOS bloque l'ouverture (« développeur non identifié »), clic droit sur le `.pkg` ou le `.command` → *Ouvrir*,
+> ou exécutez `xattr -dr com.apple.quarantine "Freeze Shimmer.vst3"` dans le Terminal.
+> Sous macOS, le clic droit sur la pédale s'obtient aussi par `Ctrl` + clic.
+
 ## Compiler soi-même
 
 Prérequis : Windows 11, Visual Studio 2022 (charge de travail *Développement Desktop C++*), CMake ≥ 3.22, Git.
+Sous macOS : Xcode (ou les Command Line Tools), CMake ≥ 3.22, Git.
 
 ```powershell
 git clone <votre-repo> FreezeShimmer
@@ -40,8 +52,15 @@ cmake --build build --config Release --parallel
 JUCE 8.0.12 est téléchargé automatiquement par CMake. Option `-DFS_COPY_AFTER_BUILD=ON` pour copier le VST3 après compilation
 (terminal administrateur requis).
 
-**Via GitHub** : poussez le dépôt ; le workflow `.github/workflows/build.yml` compile le VST3 sur `windows-2022`, lance les tests DSP
-sous Linux et publie le zip. Un tag `v1.0.0` crée une *Release* avec le zip.
+```bash
+# macOS (binaire universel)
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build --config Release --parallel
+# -> build/FreezeShimmer_artefacts/Release/VST3/Freeze Shimmer.vst3
+```
+
+**Via GitHub** : poussez le dépôt ; le workflow `.github/workflows/build.yml` compile le VST3 sur `windows-2022` et sur `macos-14`, lance les tests DSP
+sous Linux et publie les zips (`FreezeShimmer-win64.zip`, `FreezeShimmer-macos.zip`). Un tag `v1.0.0` crée une *Release* avec le zip.
 
 ---
 
@@ -157,8 +176,9 @@ Source/
     ShimmerEngine.h  Reverb.h  PitchShifter.h   (shimmer, FDN 8 lignes, octaves)
     FreezeEngine.h   FFT.h                      (freeze spectral à conservation de hauteur)
 tests/dsp_test.cpp               tests automatiques du DSP (génère des WAV d'écoute)
-scripts/Install-FreezeShimmer.ps1
-.github/workflows/build.yml      CI : tests + build VST3 Windows + release
+scripts/Install-FreezeShimmer.ps1           installateur Windows
+scripts/install-freezeshimmer-mac.command   installateur macOS
+.github/workflows/build.yml      CI : tests + build VST3 Windows et macOS + release
 ```
 
 Tests DSP en local (Linux/macOS/WSL) : `g++ -O2 -std=c++17 -ISource/dsp tests/dsp_test.cpp -o dsp_test && ./dsp_test .`

@@ -1,0 +1,10 @@
+build/
+out/
+.vs/
+.vscode/
+*.user
+*.wav
+dsp_test
+dsp_test.exe
+CMakeUserPresets.json
+.DS_Store
