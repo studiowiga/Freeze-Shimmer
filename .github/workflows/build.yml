@@ -8,20 +8,36 @@ on:
   workflow_dispatch:
 
 jobs:
-  dsp-test:
-    name: Test DSP (Linux)
-    runs-on: ubuntu-latest
+  build-macos:
+    runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v4
-      - name: Compile and run the DSP tests
+      - uses: actions/checkout@v5
+        with:
+          submodules: recursive
+
+      - name: Configure (binaire universel Intel + Apple Silicon)
         run: |
-          g++ -O2 -std=c++17 -ISource/dsp tests/dsp_test.cpp -o dsp_test
-          mkdir -p test-audio
-          ./dsp_test test-audio
+          cmake -B build -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64" \
+            -DCMAKE_OSX_DEPLOYMENT_TARGET=10.13
+
+      - name: Build
+        run: cmake --build build --config Release --parallel
+
+      - name: Signature locale (ad-hoc) et nettoyage
+        run: |
+          VST3=$(find build -type d -name "*.vst3" | head -n 1)
+          echo "Plugin trouvé : $VST3"
+          xattr -cr "$VST3"
+          codesign --force --deep --sign - "$VST3"
+          codesign --verify --deep --strict "$VST3"
+          mkdir -p dist
+          ditto -c -k --sequesterRsrc --keepParent "$VST3" "dist/$(basename "$VST3" .vst3)-macOS.zip"
+
       - uses: actions/upload-artifact@v4
         with:
-          name: dsp-test-audio
-          path: test-audio/*.wav
+          name: VST3-macOS
+          path: dist/*.zip
 
   windows-vst3:
     name: VST3 Windows x64
