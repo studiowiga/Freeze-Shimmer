@@ -5,7 +5,7 @@ Plugin d'effet **VST3** « Frozen Cosmic Reverb » par **Studio Wiga**, qui réu
 - un **shimmer / cosmic reverb** inspiré de la *Pico Shimmer* (3 scènes, retard, modulation) ;
 - un **freeze / sound retainer** inspiré de la *Pico Deep Freeze* (sustain infini, couches, glissando).
 
-L'interface reprend votre visuel `proto_freeze_shimmer.png` (fond sombre, jacks et mentions **OUTPUT** à gauche / **INPUT** à droite conservés) ; les 7 boutons sont redessinés en vectoriel (code), et une ligne d'état discrète est
+L'interface reprend votre visuel `proto_freeze_shimmer.png` (pédale givrée à potards noirs, fond noir avec motifs discrets — icebergs, cercles et lignes géométriques de la pédale) ; les 7 boutons sont redessinés en vectoriel (code), et une ligne d'état discrète est
 placée sous l'encadré « FREEZE SHIMMER ».
 
 > **Précision importante.** Les algorithmes des pédales Electro-Harmonix sont propriétaires, et le schéma fourni
@@ -190,7 +190,7 @@ Tests DSP en local (Linux/macOS/WSL) : `g++ -O2 -std=c++17 -ISource/dsp tests/ds
 - **Shimmer** : réverb FDN 8 lignes (matrice de Householder) avec diffusion d'entrée, amortissement, modulation ; l'octave supérieure est
   réinjectée dans la boucle (pitch shifter granulaire). Gain de boucle automatiquement réduit quand TIME augmente (pas d'auto-oscillation) ; TIME max = tank figé.
 - Latence : aucune déclarée (le freeze met 1-3 trames de 21 ms à atteindre son plein niveau).
-- Interface redimensionnable à ratio fixe (≈ 0,81).
+- Interface redimensionnable à ratio fixe (≈ 0,89).
 
 ## Licence
 

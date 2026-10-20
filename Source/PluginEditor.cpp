@@ -28,50 +28,54 @@ void PedalLook::drawRotarySlider (Graphics& g, int x, int y, int w, int h, float
     auto disc = [&] (float k) { return Rectangle<float> (R * 2.0f * k, R * 2.0f * k).withCentre (c); };
 
     // ombre portée douce
-    g.setGradientFill (ColourGradient (Colour (0x99000000), c.x, c.y + R * 0.05f, Colour (0x00000000), c.x, c.y + R * 1.05f, true));
-    g.fillEllipse (disc (1.04f));
-    // couronne métallique (bronze rosé)
-    g.setGradientFill (ColourGradient (Colour (0xffeedacc), c.x - R * 0.55f, c.y - R * 0.85f,
-                                       Colour (0xff6a544d), c.x + R * 0.50f, c.y + R * 0.95f, false));
+    g.setGradientFill (ColourGradient (Colour (0xaa000000), c.x, c.y + R * 0.05f, Colour (0x00000000), c.x, c.y + R * 1.08f, true));
+    g.fillEllipse (disc (1.06f));
+    // couronne striée (noir métal)
+    g.setGradientFill (ColourGradient (Colour (0xff4a4d53), c.x - R * 0.55f, c.y - R * 0.85f,
+                                       Colour (0xff0b0c0e), c.x + R * 0.50f, c.y + R * 0.95f, false));
     g.fillEllipse (disc (1.0f));
-    g.setColour (Colour (0x66000000));
-    g.drawEllipse (disc (1.0f), R * 0.012f);
-    // gorge sombre
-    g.setColour (Colour (0xff2a2226));
-    g.fillEllipse (disc (0.925f));
+    {
+        const int n = 56;
+        for (int i = 0; i < n; ++i)
+        {
+            const float a = juce::MathConstants<float>::twoPi * (float) i / (float) n;
+            const float r1 = R * 0.90f, r2 = R * 0.985f;
+            g.setColour ((i & 1) ? Colour (0x30ffffff) : Colour (0x40000000));
+            g.drawLine (c.x + std::sin (a) * r1, c.y - std::cos (a) * r1, c.x + std::sin (a) * r2, c.y - std::cos (a) * r2, R * 0.03f);
+        }
+    }
     // liseré bleu en page secondaire
     if (sec)
     {
-        g.setColour (kBlue.withAlpha (hot ? 0.95f : 0.75f));
-        g.drawEllipse (disc (0.955f), R * 0.03f);
+        g.setColour (kBlue.withAlpha (hot ? 0.95f : 0.80f));
+        g.drawEllipse (disc (0.985f), R * 0.04f);
     }
-    // capuchon crème
+    // capuchon noir brossé
+    g.setGradientFill (ColourGradient (Colour (0xff3a3d42), c.x - R * 0.30f, c.y - R * 0.40f,
+                                       Colour (0xff060607), c.x + R * 0.35f, c.y + R * 0.60f, true));
+    g.fillEllipse (disc (0.84f));
+    g.setColour (Colour (0x55ffffff));
+    g.drawEllipse (disc (0.84f), R * 0.014f);
+    // reflets brossés (deux secteurs clairs opposés)
     {
-        g.setGradientFill (ColourGradient (Colour (0xfffffdf7), c.x - R * 0.28f, c.y - R * 0.38f,
-                                           Colour (0xffd6cebe), c.x + R * 0.32f, c.y + R * 0.58f, true));
-        g.fillEllipse (disc (0.865f));
-        // arête du capuchon
-        g.setColour (Colour (0x30000000));
-        g.drawEllipse (disc (0.865f), R * 0.014f);
-        // reflet
-        Rectangle<float> hl (R * 0.9f, R * 0.62f);
-        hl.setCentre (c.x - R * 0.20f, c.y - R * 0.46f);
-        g.setGradientFill (ColourGradient (Colour (0x80ffffff), hl.getCentreX(), hl.getCentreY(),
-                                           Colour (0x00ffffff), hl.getRight(), hl.getCentreY(), true));
-        g.fillEllipse (hl);
-        // ombre intérieure en bas
-        g.setGradientFill (ColourGradient (Colour (0x00000000), c.x, c.y + R * 0.15f, Colour (0x2a000000), c.x, c.y + R * 0.85f, false));
-        g.fillEllipse (disc (0.84f));
+        Path p1, p2;
+        const float rr = R * 0.80f;
+        p1.addPieSegment (disc (0.80f), -0.35f, 0.15f, 0.0f);
+        p2.addPieSegment (disc (0.80f), juce::MathConstants<float>::pi - 0.35f, juce::MathConstants<float>::pi + 0.15f, 0.0f);
+        juce::ignoreUnused (rr);
+        g.setColour (Colour (0x16ffffff));
+        g.fillPath (p1);
+        g.fillPath (p2);
     }
-    // repère
+    // repère blanc
     {
         const float a = startAngle + pos * (endAngle - startAngle);
-        const float r1 = R * 0.30f, r2 = R * 0.72f;
+        const float r1 = R * 0.14f, r2 = R * 0.78f;
         Path p;
         p.startNewSubPath (c.x + std::sin (a) * r1, c.y - std::cos (a) * r1);
         p.lineTo (c.x + std::sin (a) * r2, c.y - std::cos (a) * r2);
-        g.setColour (sec ? Colour (0xff17566d) : Colour (0xff33262b));
-        g.strokePath (p, PathStrokeType (R * 0.075f, PathStrokeType::curved, PathStrokeType::rounded));
+        g.setColour (sec ? Colour (0xff8fdcff) : Colour (0xfff4f7fb));
+        g.strokePath (p, PathStrokeType (R * 0.085f, PathStrokeType::curved, PathStrokeType::rounded));
     }
 }
 
@@ -85,19 +89,29 @@ bool ModeButton::hitTest (int x, int y)
 
 void ModeButton::paint (Graphics& g)
 {
-    // LED unique : éteinte en bypass, bleu fixe pédale active, bleu clignotant quand le freeze est actif
-    if (! owner.getBool ("engage")) return;
-    const bool frozen = owner.proc.frozenState.load();
-    if (frozen && ! blinkPhase) return;
+    // LED complète (recouvre celle de l'image) : éteinte en bypass, bleu fixe pédale active, bleu clignotant en freeze
     const auto c = getLocalBounds().toFloat().getCentre();
     const float R = (float) getWidth() * 0.5f;
-    const Colour led = kBlue;
-    g.setGradientFill (ColourGradient (led.withAlpha (0.55f), c.x, c.y, led.withAlpha (0.0f), c.x, c.y + R, true));
-    g.fillEllipse (Rectangle<float> (R * 2.0f, R * 2.0f).withCentre (c));
-    const float cr = R * 0.66f;
-    g.setGradientFill (ColourGradient (led.brighter (0.6f).withAlpha (0.80f), c.x - cr * 0.2f, c.y - cr * 0.3f,
-                                       led.withAlpha (0.35f), c.x, c.y + cr, true));
-    g.fillEllipse (Rectangle<float> (cr * 2.0f, cr * 2.0f).withCentre (c));
+    const bool on = owner.getBool ("engage") && ! (owner.proc.frozenState.load() && ! blinkPhase);
+
+    // chemise métallique
+    g.setGradientFill (ColourGradient (Colour (0xffb9c3cf), c.x - R * 0.4f, c.y - R * 0.5f, Colour (0xff3b4350), c.x + R * 0.5f, c.y + R * 0.6f, false));
+    g.fillEllipse (Rectangle<float> (R * 1.70f, R * 1.70f).withCentre (c));
+    g.setColour (Colour (0xff0b1018));
+    g.fillEllipse (Rectangle<float> (R * 1.38f, R * 1.38f).withCentre (c));
+
+    if (on)
+    {
+        g.setGradientFill (ColourGradient (kBlue.withAlpha (0.55f), c.x, c.y, kBlue.withAlpha (0.0f), c.x, c.y + R * 1.25f, true));
+        g.fillEllipse (Rectangle<float> (R * 2.5f, R * 2.5f).withCentre (c));
+        g.setGradientFill (ColourGradient (Colour (0xffe6f8ff), c.x - R * 0.2f, c.y - R * 0.25f, kBlue.darker (0.3f), c.x, c.y + R * 0.7f, true));
+        g.fillEllipse (Rectangle<float> (R * 1.2f, R * 1.2f).withCentre (c));
+    }
+    else
+    {
+        g.setGradientFill (ColourGradient (Colour (0xff2b3340), c.x - R * 0.2f, c.y - R * 0.25f, Colour (0xff0d1219), c.x, c.y + R * 0.7f, true));
+        g.fillEllipse (Rectangle<float> (R * 1.2f, R * 1.2f).withCentre (c));
+    }
 }
 
 void ModeButton::mouseDown (const MouseEvent& e)
