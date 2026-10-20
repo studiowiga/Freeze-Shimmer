@@ -25,58 +25,84 @@ void PedalLook::drawRotarySlider (Graphics& g, int x, int y, int w, int h, float
     const auto c = b.getCentre();
     const bool sec = (bool) s.getProperties()["secondary"];
     const bool hot = s.isMouseOverOrDragging();
-    auto disc = [&] (float k) { return Rectangle<float> (R * 2.0f * k, R * 2.0f * k).withCentre (c); };
+    const float rot = startAngle + pos * (endAngle - startAngle);   // angle du potentiomètre
+    const float twoPi = juce::MathConstants<float>::twoPi;
+    auto disc = [] (Point<float> p, float r) { return Rectangle<float> (r * 2.0f, r * 2.0f).withCentre (p); };
+
+    const float skirtR = R * 0.97f, capR = R * 0.80f;
+    const Point<float> cs (c.x, c.y + R * 0.07f);     // la jupe est légèrement plus basse (effet cylindre)
 
     // ombre portée douce
-    g.setGradientFill (ColourGradient (Colour (0xaa000000), c.x, c.y + R * 0.05f, Colour (0x00000000), c.x, c.y + R * 1.08f, true));
-    g.fillEllipse (disc (1.06f));
-    // couronne striée (noir métal)
-    g.setGradientFill (ColourGradient (Colour (0xff4a4d53), c.x - R * 0.55f, c.y - R * 0.85f,
-                                       Colour (0xff0b0c0e), c.x + R * 0.50f, c.y + R * 0.95f, false));
-    g.fillEllipse (disc (1.0f));
+    g.setGradientFill (ColourGradient (Colour (0xb0000000), cs.x, cs.y + R * 0.06f, Colour (0x00000000), cs.x, cs.y + R * 1.12f, true));
+    g.fillEllipse (disc ({ cs.x, cs.y + R * 0.05f }, R * 1.10f));
+
+    // jupe cylindrique striée
+    g.setGradientFill (ColourGradient (Colour (0xff2a2d33), cs.x, cs.y - skirtR, Colour (0xff050506), cs.x, cs.y + skirtR, false));
+    g.fillEllipse (disc (cs, skirtR));
+    // stries : elles tournent avec le potentiomètre ; éclairage fixe (haut-gauche)
     {
-        const int n = 56;
+        const int n = 48;
         for (int i = 0; i < n; ++i)
         {
-            const float a = juce::MathConstants<float>::twoPi * (float) i / (float) n;
-            const float r1 = R * 0.90f, r2 = R * 0.985f;
-            g.setColour ((i & 1) ? Colour (0x30ffffff) : Colour (0x40000000));
-            g.drawLine (c.x + std::sin (a) * r1, c.y - std::cos (a) * r1, c.x + std::sin (a) * r2, c.y - std::cos (a) * r2, R * 0.03f);
+            const float a = rot + twoPi * (float) i / (float) n;       // position réelle de la strie
+            const float lit = 0.5f + 0.5f * std::cos (a + 0.6f);        // 1 = face à la lumière
+            const float r1 = skirtR * 0.82f, r2 = skirtR * 0.985f;
+            g.setColour (Colour::fromFloatRGBA (1.0f, 1.0f, 1.0f, 0.06f + 0.30f * lit * lit));
+            g.drawLine (cs.x + std::sin (a) * r1, cs.y - std::cos (a) * r1,
+                        cs.x + std::sin (a) * r2, cs.y - std::cos (a) * r2, R * 0.034f);
+            const float a2 = a + twoPi / (float) n * 0.5f;
+            g.setColour (Colour::fromFloatRGBA (0.0f, 0.0f, 0.0f, 0.55f));
+            g.drawLine (cs.x + std::sin (a2) * r1, cs.y - std::cos (a2) * r1,
+                        cs.x + std::sin (a2) * r2, cs.y - std::cos (a2) * r2, R * 0.03f);
         }
     }
     // liseré bleu en page secondaire
     if (sec)
     {
         g.setColour (kBlue.withAlpha (hot ? 0.95f : 0.80f));
-        g.drawEllipse (disc (0.985f), R * 0.04f);
+        g.drawEllipse (disc (cs, skirtR), R * 0.04f);
     }
     // capuchon noir brossé
-    g.setGradientFill (ColourGradient (Colour (0xff3a3d42), c.x - R * 0.30f, c.y - R * 0.40f,
-                                       Colour (0xff060607), c.x + R * 0.35f, c.y + R * 0.60f, true));
-    g.fillEllipse (disc (0.84f));
-    g.setColour (Colour (0x55ffffff));
-    g.drawEllipse (disc (0.84f), R * 0.014f);
-    // reflets brossés (deux secteurs clairs opposés)
+    g.setGradientFill (ColourGradient (Colour (0xff383b41), c.x - capR * 0.5f, c.y - capR * 0.7f,
+                                       Colour (0xff060607), c.x + capR * 0.5f, c.y + capR * 0.8f, false));
+    g.fillEllipse (disc (c, capR));
+    g.setColour (Colour (0x66ffffff));
+    g.drawEllipse (disc (c, capR), R * 0.016f);
+    // reflets brossés fixes (deux secteurs opposés)
     {
         Path p1, p2;
-        const float rr = R * 0.80f;
-        p1.addPieSegment (disc (0.80f), -0.35f, 0.15f, 0.0f);
-        p2.addPieSegment (disc (0.80f), juce::MathConstants<float>::pi - 0.35f, juce::MathConstants<float>::pi + 0.15f, 0.0f);
-        juce::ignoreUnused (rr);
-        g.setColour (Colour (0x16ffffff));
+        p1.addPieSegment (disc (c, capR * 0.96f), -0.40f, 0.20f, 0.0f);
+        p2.addPieSegment (disc (c, capR * 0.96f), juce::MathConstants<float>::pi - 0.40f, juce::MathConstants<float>::pi + 0.20f, 0.0f);
+        g.setColour (Colour (0x18ffffff));
         g.fillPath (p1);
         g.fillPath (p2);
     }
-    // repère blanc
+    // repère
     {
-        const float a = startAngle + pos * (endAngle - startAngle);
-        const float r1 = R * 0.14f, r2 = R * 0.78f;
+        const float r1 = capR * 0.18f, r2 = capR * 0.92f;
         Path p;
-        p.startNewSubPath (c.x + std::sin (a) * r1, c.y - std::cos (a) * r1);
-        p.lineTo (c.x + std::sin (a) * r2, c.y - std::cos (a) * r2);
+        p.startNewSubPath (c.x + std::sin (rot) * r1, c.y - std::cos (rot) * r1);
+        p.lineTo (c.x + std::sin (rot) * r2, c.y - std::cos (rot) * r2);
         g.setColour (sec ? Colour (0xff8fdcff) : Colour (0xfff4f7fb));
         g.strokePath (p, PathStrokeType (R * 0.085f, PathStrokeType::curved, PathStrokeType::rounded));
     }
+}
+
+
+namespace
+{
+// halo circulaire : dégradé radial multi-arrêts, alpha → 0 exactement au bord (jamais rogné)
+void fillHalo (juce::Graphics& g, juce::Point<float> c, float rCore, float rOuter, juce::Colour col, float peak)
+{
+    juce::ColourGradient gr (col.withAlpha (peak), c.x, c.y, col.withAlpha (0.0f), c.x + rOuter, c.y, true);
+    const double k = (double) (rCore / rOuter);
+    gr.addColour (k,              col.withAlpha (peak * 0.85f));
+    gr.addColour (k + (1.0 - k) * 0.25, col.withAlpha (peak * 0.50f));
+    gr.addColour (k + (1.0 - k) * 0.55, col.withAlpha (peak * 0.20f));
+    gr.addColour (k + (1.0 - k) * 0.80, col.withAlpha (peak * 0.05f));
+    g.setGradientFill (gr);
+    g.fillEllipse (juce::Rectangle<float> (rOuter * 2.0f, rOuter * 2.0f).withCentre (c));
+}
 }
 
 //==============================================================================
@@ -84,14 +110,14 @@ void PedalLook::drawRotarySlider (Graphics& g, int x, int y, int w, int h, float
 bool ModeButton::hitTest (int x, int y)
 {
     const auto c = getLocalBounds().getCentre().toFloat();
-    return c.getDistanceFrom (Point<float> ((float) x, (float) y)) <= (float) getWidth() * 0.5f;
+    return c.getDistanceFrom (Point<float> ((float) x, (float) y)) <= coreRadius();
 }
 
 void ModeButton::paint (Graphics& g)
 {
     // LED complète (recouvre celle de l'image) : éteinte en bypass, bleu fixe pédale active, bleu clignotant en freeze
     const auto c = getLocalBounds().toFloat().getCentre();
-    const float R = (float) getWidth() * 0.5f;
+    const float R = coreRadius();
     const bool on = owner.getBool ("engage") && ! (owner.proc.frozenState.load() && ! blinkPhase);
 
     // chemise métallique
@@ -102,8 +128,7 @@ void ModeButton::paint (Graphics& g)
 
     if (on)
     {
-        g.setGradientFill (ColourGradient (kBlue.withAlpha (0.55f), c.x, c.y, kBlue.withAlpha (0.0f), c.x, c.y + R * 1.25f, true));
-        g.fillEllipse (Rectangle<float> (R * 2.5f, R * 2.5f).withCentre (c));
+        fillHalo (g, c, R * 0.9f, (float) getWidth() * 0.5f, kBlue, 0.70f);
         g.setGradientFill (ColourGradient (Colour (0xffe6f8ff), c.x - R * 0.2f, c.y - R * 0.25f, kBlue.darker (0.3f), c.x, c.y + R * 0.7f, true));
         g.fillEllipse (Rectangle<float> (R * 1.2f, R * 1.2f).withCentre (c));
     }
@@ -147,18 +172,17 @@ void ModeButton::mouseUp (const MouseEvent& e)
 bool FootSwitch::hitTest (int x, int y)
 {
     const auto c = getLocalBounds().getCentre().toFloat();
-    return c.getDistanceFrom (Point<float> ((float) x, (float) y)) <= (float) getWidth() * 0.5f;
+    return c.getDistanceFrom (Point<float> ((float) x, (float) y)) <= coreRadius();
 }
 
 void FootSwitch::paint (Graphics& g)
 {
     const auto c = getLocalBounds().toFloat().getCentre();
-    const float R = (float) getWidth() * 0.5f;
+    const float R = coreRadius();
     if (owner.proc.frozenState.load())
     {
         const float pulse = 0.55f + 0.25f * std::sin ((float) Time::getMillisecondCounter() * 0.004f);
-        g.setGradientFill (ColourGradient (Colour (0x0038d7ff), c.x, c.y, Colour (0xff6fe3ff).withAlpha (pulse), c.x, c.y + R, true));
-        g.fillEllipse (Rectangle<float> (R * 2.1f, R * 2.1f).withCentre (c));
+        fillHalo (g, c, R * 0.95f, (float) getWidth() * 0.5f, Colour (0xff4fd8ff), pulse);
     }
     if (pressed)
     {
@@ -272,7 +296,8 @@ void StatusLine::paint (Graphics& g)
 FreezeShimmerEditor::FreezeShimmerEditor (FreezeShimmerProcessor& p)
     : AudioProcessorEditor (&p), proc (p)
 {
-    background = ImageCache::getFromMemory (BinaryData::background_jpg, BinaryData::background_jpgSize);
+    background   = ImageCache::getFromMemory (BinaryData::background_jpg, BinaryData::background_jpgSize);       // 780 x 990
+    background1x = ImageCache::getFromMemory (BinaryData::background_1x_jpg, BinaryData::background_1x_jpgSize); // 390 x 495 (net à la taille par défaut)
 
     for (int i = 0; i < 7; ++i)
     {
@@ -529,7 +554,8 @@ void FreezeShimmerEditor::paint (Graphics& g)
 {
     g.fillAll (Colours::white);
     g.setImageResamplingQuality (Graphics::highResamplingQuality);
-    g.drawImage (background, getLocalBounds().toFloat(), RectanglePlacement::stretchToFit);
+    const bool native = std::abs (getHeight() - art::heightPct50) <= 2 && background1x.isValid();
+    g.drawImage (native ? background1x : background, getLocalBounds().toFloat(), RectanglePlacement::stretchToFit);
 }
 
 void FreezeShimmerEditor::resized()
@@ -549,7 +575,7 @@ void FreezeShimmerEditor::resized()
         c.setBounds (Rectangle<float> (d, d).withCentre ({ k.x * s, k.y * s }).toNearestInt());
     };
     for (int i = 0; i < 7; ++i) place (knob[i], art::knobs[i]);
-    place (modeButton, art::modeBtn, 1.25f);
-    place (footSwitch, art::footswitch, 1.1f);
+    place (modeButton, art::modeBtn, ModeButton::kPad);
+    place (footSwitch, art::footswitch, FootSwitch::kPad);
     status.setBounds (Rectangle<float> (art::statusX * s, art::statusY * s, art::statusW * s, art::statusH * s).toNearestInt());
 }

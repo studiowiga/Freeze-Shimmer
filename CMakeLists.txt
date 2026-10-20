@@ -46,7 +46,7 @@ juce_add_plugin(FreezeShimmer
   EDITOR_WANTS_KEYBOARD_FOCUS FALSE
   COPY_PLUGIN_AFTER_BUILD    ${FS_COPY_AFTER_BUILD})
 
-juce_add_binary_data(FreezeShimmerAssets SOURCES Assets/background.jpg)
+juce_add_binary_data(FreezeShimmerAssets SOURCES Assets/background.jpg Assets/background_1x.jpg)
 
 target_sources(FreezeShimmer PRIVATE
   Source/PluginProcessor.cpp

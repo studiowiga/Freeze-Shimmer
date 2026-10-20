@@ -158,7 +158,7 @@ Molette sur le bouton MODE, ou clic droit → *Presets d'usine*, ou *Program Cha
 
 ## Fenêtre
 
-- Ouverture à **50 %** (493 px de haut ; la largeur suit le ratio du visuel, 50 px de fond sombre de chaque côté de la pédale, mesurés à la taille par défaut). **Clic droit sur la pédale** → *Window size* : Default, 60 %, 75 %, 100 %.
+- Ouverture à **50 % = 390 × 495 px** (taille minimale, jamais en dessous). Visuel net : image 1× à la taille par défaut, image 2× au-delà. **Clic droit sur la pédale** → *Window size* : Default, 60 %, 75 %, 100 %.
 - Redimensionnable à la souris par le coin, de 50 % (taille minimale = taille par défaut) à 150 % ; la taille est **mémorisée dans le projet**.
 
 ---
