@@ -7,11 +7,11 @@ namespace art
 {
 constexpr float W = 780.0f, H = 990.0f;   // image 2x (fenêtre par défaut 390 x 495 px)
 struct Circle { float x, y, r; };
-constexpr Circle knobs[7] = { { 233, 125, 64 }, { 546, 130, 64 }, { 208, 290, 64 }, { 387, 286, 64 },
-                              { 578, 292, 64 }, { 212, 462, 64 }, { 568, 464, 64 } };   // centre du capuchon ; r = demi-taille du composant
-constexpr Circle modeBtn    = { 388, 84, 18 };
-constexpr Circle footswitch = { 388, 866, 56 };
-constexpr float statusX = 155, statusY = 735, statusW = 470, statusH = 27;
+constexpr Circle knobs[7] = { { 223, 128, 66 }, { 554, 130, 66 }, { 198, 292, 66 }, { 392, 289, 66 },
+                              { 586, 291, 66 }, { 204, 463, 66 }, { 580, 466, 66 } };   // centre du capuchon ; r = demi-taille du composant
+constexpr Circle modeBtn    = { 391, 86, 24 };
+constexpr Circle footswitch = { 389, 869, 56 };
+constexpr float statusX = 156, statusY = 735, statusW = 470, statusH = 27;
 
 // tailles de fenêtre : 100 % = 990 px de haut ; ouverture par défaut = 50 % (390 x 495 px)
 constexpr int heightPct50 = 495, heightPct60 = 594, heightPct75 = 743, heightPct100 = 990, heightMax = 1485;
