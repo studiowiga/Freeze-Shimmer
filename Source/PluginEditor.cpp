@@ -544,10 +544,35 @@ void FreezeShimmerEditor::timerCallback()
     if (midiFlashTicks > 0) --midiFlashTicks; else lastFromMidi.store (false);
     const int pr = proc.presetIndex.load();
     if (pr != lastPresetSeen) { lastPresetSeen = pr; lastIndex.store (104); lastValue.store ((float) pr); lastFromMidi.store (false); }
-    modeButton.setBlink ((Time::getMillisecondCounter() / 350) % 2 == 0);
-    modeButton.repaint();
-    status.repaint();
-    footSwitch.repaint();
+
+    useSoftwareRenderer();   // au cas où la fenêtre a été recréée par l'hôte (changement d'écran, d'échelle…)
+
+    // on ne redessine un composant que si ce qu'il affiche a vraiment changé (zéro travail au repos)
+    const bool frozen = proc.frozenState.load();
+
+    // LED MODE : éteinte / bleu fixe / bleu clignotant (en freeze)
+    const bool blink = (Time::getMillisecondCounter() / 350) % 2 == 0;
+    modeButton.setBlinkPhase (blink);
+    const bool modeOn = getBool ("engage") && ! (frozen && ! blink);
+    if (modeOn != drawnModeOn) { drawnModeOn = modeOn; modeButton.repaint(); }
+
+    // footswitch : halo pulsé tant que le freeze est actif (animation continue), un dernier redessin à l'arrêt
+    const float pulse = frozen ? 0.55f + 0.25f * std::sin ((float) Time::getMillisecondCounter() * 0.004f) : 0.0f;
+    if (frozen != drawnFrozen || std::abs (pulse - drawnPulse) >= 0.002f)
+    {
+        drawnFrozen = frozen; drawnPulse = pulse;
+        footSwitch.repaint();
+    }
+
+    // ligne d'état
+    StatusState st;
+    st.idx = lastIndex.load(); st.value = lastValue.load(); st.flash = lastFromMidi.load(); st.frozen = frozen;
+    st.scene = choice ("scene"); st.fmode = choice ("fmode"); st.page = page();
+    if (! drawnStatusValid || st != drawnStatus)
+    {
+        drawnStatus = st; drawnStatusValid = true;
+        status.repaint();
+    }
 }
 
 void FreezeShimmerEditor::paint (Graphics& g)
@@ -558,11 +583,35 @@ void FreezeShimmerEditor::paint (Graphics& g)
     g.drawImage (native ? background1x : background, getLocalBounds().toFloat(), RectanglePlacement::stretchToFit);
 }
 
+//==============================================================================
+// Anti-gel de la fenêtre (Windows) : JUCE 8 dessine par défaut avec Direct2D (carte graphique).
+// Avec certains pilotes (Intel notamment) la fenêtre du plugin cesse de se rafraîchir alors que
+// le DAW continue de tourner. Le moteur logiciel est stable partout et largement assez rapide ici.
+void FreezeShimmerEditor::useSoftwareRenderer()
+{
+   #if JUCE_WINDOWS
+    if (auto* peer = getPeer())
+    {
+        int sw = peer->getAvailableRenderingEngines().indexOf ("Software Renderer");
+        if (sw < 0) sw = 0;
+        if (peer->getCurrentRenderingEngine() != sw)
+            peer->setCurrentRenderingEngine (sw);
+    }
+   #endif
+}
+
+void FreezeShimmerEditor::parentHierarchyChanged()
+{
+    useSoftwareRenderer();
+}
+
 void FreezeShimmerEditor::resized()
 {
     // jamais plus petit que la taille par défaut (50 %), quelle que soit la demande de l'hôte
+    // tolérance de 2 px : avec la mise à l'échelle Windows (125 %, 150 %…) l'hôte arrondit les tailles ;
+    // sans marge, les deux se renvoient la fenêtre en boucle
     const int minW = roundToInt ((double) art::heightPct50 * (double) art::W / (double) art::H);
-    if (getHeight() < art::heightPct50 || getWidth() < minW)
+    if (getHeight() < art::heightPct50 - 2 || getWidth() < minW - 2)
     {
         setSize (minW, art::heightPct50);
         return;

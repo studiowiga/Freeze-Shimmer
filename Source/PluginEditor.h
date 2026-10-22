@@ -60,6 +60,7 @@ public:
     void mouseUp (const juce::MouseEvent&) override;
     void mouseWheelMove (const juce::MouseEvent&, const juce::MouseWheelDetails&) override;
     void setBlink (bool on) { blinkPhase = on; repaint(); }
+    void setBlinkPhase (bool on) { blinkPhase = on; }       // sans redessin (l'éditeur décide quand redessiner)
     static constexpr float kPad = 3.0f;                       // le composant est kPad fois plus grand que la LED (halo)
     float coreRadius() const { return (float) getWidth() / (2.0f * kPad); }
 private:
@@ -104,6 +105,7 @@ public:
 
     void paint (juce::Graphics&) override;
     void resized() override;
+    void parentHierarchyChanged() override;
     void mouseDown (const juce::MouseEvent&) override;
 
     FreezeShimmerProcessor& proc;
@@ -135,6 +137,7 @@ public:
 private:
     void parameterChanged (const juce::String&, float) override;
     void timerCallback() override;
+    void useSoftwareRenderer();
     void bindKnobs();
     void showKnob7Menu();
 
@@ -148,6 +151,19 @@ private:
     bool knob7Gliss = false;
     int lastMidiStampSeen = 0, lastPresetSeen = -1;
     int midiFlashTicks = 0;
+
+    // dernier état réellement dessiné : on ne redessine un composant que si ce qu'il affiche a changé
+    bool drawnModeOn = false, drawnFrozen = false, drawnStatusValid = false;
+    float drawnPulse = -1.0f;
+    struct StatusState
+    {
+        int idx = -1; float value = 0.0f; bool flash = false, frozen = false; int scene = 0, fmode = 0, page = 0;
+        bool operator!= (const StatusState& o) const
+        {
+            return idx != o.idx || value != o.value || flash != o.flash || frozen != o.frozen
+                || scene != o.scene || fmode != o.fmode || page != o.page;
+        }
+    } drawnStatus;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (FreezeShimmerEditor)
 };

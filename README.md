@@ -60,7 +60,7 @@ cmake --build build --config Release --parallel
 ```
 
 **Via GitHub** : poussez le dépôt ; le workflow `.github/workflows/build.yml` compile le VST3 sur `windows-2022` et sur `macos-14`, lance les tests DSP
-sous Linux et publie les zips (`FreezeShimmer-win64.zip`, `FreezeShimmer-macos.zip`). Un tag `v1.0.0` crée une *Release* avec le zip.
+sous Linux et publie les zips (`FreezeShimmer-win64.zip`, `FreezeShimmer-macos.zip`). Un tag `v1.0.1` crée une *Release* avec le zip.
 
 ---
 
