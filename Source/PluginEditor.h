@@ -123,8 +123,14 @@ public:
     void stepPreset (int delta);
     void loadPreset (int index);
     void setWindowHeight (int h);
-    void showModeMenu (juce::Component* target);
-    void showSizeMenu (juce::Component* target);
+    // learnA / learnB >= 0 : clic droit sur une commande (MIDI Learn en tête du menu)
+    void showModeMenu (juce::Component* target, int learnA = -1, int learnB = -1);
+    void showSizeMenu (juce::Component* target, int learnIdx = -1);
+    void addLearnSection (juce::PopupMenu&, const juce::String& header, int learnA, int learnB = -1);
+    void addMidiLearnSubMenu (juce::PopupMenu&);
+    bool handleLearnResult (int r);
+    juce::String ccLabel (int learnIdx) const;     // « CC n » de l'assignation actuelle (ou « no CC »)
+    juce::String learnLine;                        // message MIDI Learn de la ligne d'état (vide = aucun)
     void showMidiMap();
     int  knobParamIndex (int knob) const;          // indice dans fsp::kKnobs du paramètre actuellement lié
     juce::Colour sceneColour() const;
@@ -164,6 +170,7 @@ private:
     bool knob7Gliss = false;
     int lastMidiStampSeen = 0, lastPresetSeen = -1;
     int midiFlashTicks = 0;
+    double learnLineUntil = 0.0;
 
     // dernier état réellement dessiné : on ne redessine un composant que si ce qu'il affiche a changé
     bool drawnModeOn = false, drawnFrozen = false, drawnStatusValid = false;
@@ -171,10 +178,11 @@ private:
     struct StatusState
     {
         int idx = -1; float value = 0.0f; bool flash = false, frozen = false; int scene = 0, fmode = 0, page = 0;
+        juce::String learn;
         bool operator!= (const StatusState& o) const
         {
             return idx != o.idx || value != o.value || flash != o.flash || frozen != o.frozen
-                || scene != o.scene || fmode != o.fmode || page != o.page;
+                || scene != o.scene || fmode != o.fmode || page != o.page || learn != o.learn;
         }
     } drawnStatus;
 

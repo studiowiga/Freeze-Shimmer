@@ -24,8 +24,29 @@ FreezeShimmerProcessor::FreezeShimmerProcessor()
     for (auto* v : { &wetL, &wetR, &shL, &shR, &frL, &frR }) v->assign ((size_t) kChunk, 0.0f);
     for (int i = 0; i < kNumQueued; ++i) { pendingValue[i] = 0.0f; pendingSet[i] = false; }
 
+    resetMidiMap();
     applyPreset (0);   // son par défaut : CLEAN PLATE (premier preset) (écrasé par l'état sauvegardé du projet)
     startTimerHz (60);
+}
+
+//==============================================================================
+// MIDI Learn (v1.2)
+FreezeShimmerProcessor::LearnDef FreezeShimmerProcessor::learnDef (int i)
+{
+    if (i >= 0 && i < fsp::kNumKnobs) return { fsp::kKnobs[i].id, fsp::kKnobs[i].name, fsp::kKnobs[i].cc, learnContinuous };
+    switch (i)
+    {
+        case kLearnScene:   return { "scene",   "SCENE",          fsp::kCcScene,   learnSelector };     // 0-42 / 43-85 / 86-127
+        case kLearnFMode:   return { "fmode",   "FREEZE MODE",    fsp::kCcFMode,   learnSelector };
+        case kLearnFreeze:  return { "freeze",  "FOOTSWITCH",     fsp::kCcFreeze,  learnFootswitch };   // >= 64 : enfoncé
+        case kLearnEngage:  return { "engage",  "ENGAGE",         fsp::kCcEngage,  learnToggle };       // >= 64 : effet actif
+        default:            return { "release", "RELEASE FREEZE", fsp::kCcRelease, learnTrigger };      // >= 64 : relâche
+    }
+}
+
+void FreezeShimmerProcessor::resetMidiMap()
+{
+    for (int i = 0; i < kNumLearn; ++i) ccMap[i].store (learnDef (i).defaultCC);
 }
 
 // Anti-gel v2 (Studio Wiga) : jamais d'appel à l'hôte (setValueNotifyingHost) ni d'allocation depuis le
@@ -156,30 +177,39 @@ void FreezeShimmerProcessor::handleMidi (juce::MidiBuffer& midi)
 
         const int cc = m.getControllerNumber(), val = m.getControllerValue();
         const float v01 = (float) val / 127.0f;
-        bool handled = false;
+        bool handled = true;
 
-        for (int i = 0; i < fsp::kNumKnobs; ++i)
-            if (fsp::kKnobs[i].cc == cc) { queueNormalised (i, v01); handled = true; break; }
-
-        if (! handled)
+        // MIDI Learn : le CC reçu est affecté à la commande visée (il n'agit pas sur le son)
+        const int lt = learnTarget.load();
+        if (lt >= 0 && lt < kNumLearn && cc < 120)
         {
-            handled = true;
-            switch (cc)
-            {
-                case fsp::kCcScene:  queueNormalised (kQScene, (float) juce::jmin (2, val / 43) / 2.0f); break;
-                case fsp::kCcFMode:  queueNormalised (kQFMode, (float) juce::jmin (2, val / 43) / 2.0f); break;
-                case fsp::kCcFreeze:
-                case fsp::kCcSustain:
-                {
-                    const bool down = val >= 64;
-                    if (down != sustainDown) { sustainDown = down; footswitch (down); }
-                    break;
-                }
-                case fsp::kCcEngage:  queueNormalised (kQEngage, val >= 64 ? 1.0f : 0.0f); break;
-                case fsp::kCcRelease: if (val >= 64) applyCommand (cmdRelease); break;
-                default: handled = false; break;
-            }
+            for (int j = 0; j < kNumLearn; ++j)
+                if (j != lt && ccMap[j].load() == cc) ccMap[j].store (-1);   // numéro déjà pris : l'autre commande est désassignée
+            ccMap[lt].store (cc);
+            lastLearned.store (lt);
+            learnTarget.store (-1);
+            lastMidiCc.store (cc);
+            lastMidiValue.store (val);
+            lastMidiStamp.fetch_add (1);
+            continue;
         }
+
+        int ctl = -1;
+        for (int i = 0; i < kNumLearn; ++i)
+            if (ccMap[i].load (std::memory_order_relaxed) == cc) { ctl = i; break; }
+
+        if (ctl >= 0 && ctl < fsp::kNumKnobs) queueNormalised (ctl, v01);
+        else if (ctl == kLearnScene)          queueNormalised (kQScene, (float) juce::jmin (2, val / 43) / 2.0f);
+        else if (ctl == kLearnFMode)          queueNormalised (kQFMode, (float) juce::jmin (2, val / 43) / 2.0f);
+        else if (ctl == kLearnEngage)         queueNormalised (kQEngage, val >= 64 ? 1.0f : 0.0f);
+        else if (ctl == kLearnRelease)        { if (val >= 64) applyCommand (cmdRelease); }
+        else if (ctl == kLearnFreeze || (ctl < 0 && cc == fsp::kCcSustain))   // pédale de sustain = footswitch (si CC64 libre)
+        {
+            const bool down = val >= 64;
+            if (down != sustainDown) { sustainDown = down; footswitch (down); }
+        }
+        else handled = false;
+
         if (handled)
         {
             lastMidiCc.store (cc);
@@ -300,6 +330,8 @@ void FreezeShimmerProcessor::getStateInformation (juce::MemoryBlock& dest)
     state.setProperty ("uiPage", uiPage.load(), nullptr);
     state.setProperty ("uiHeight", uiHeight.load(), nullptr);
     state.setProperty ("preset", presetIndex.load(), nullptr);
+    for (int i = 0; i < kNumLearn; ++i)
+        state.setProperty (juce::String ("cc_") + learnDef (i).id, ccMap[i].load(), nullptr);
     if (auto xml = state.createXml()) copyXmlToBinary (*xml, dest);
 }
 
@@ -312,6 +344,9 @@ void FreezeShimmerProcessor::setStateInformation (const void* data, int size)
             uiPage.store ((int) vt.getProperty ("uiPage", 0));
             uiHeight.store (juce::jlimit (493, 1479, (int) vt.getProperty ("uiHeight", 493)));
             presetIndex.store (juce::jlimit (0, fsp::kNumPresets - 1, (int) vt.getProperty ("preset", 0)));
+            // assignations MIDI Learn (ancien projet sans ces propriétés : CC fixes d'avant)
+            for (int i = 0; i < kNumLearn; ++i)
+                ccMap[i].store (juce::jlimit (-1, 127, (int) vt.getProperty (juce::String ("cc_") + learnDef (i).id, learnDef (i).defaultCC)));
             apvts.replaceState (vt);
         }
 }

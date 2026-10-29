@@ -119,6 +119,8 @@ et à droite la valeur **MIDI** correspondante (`CC24 = 70`). Elle passe en vert
 Tous les paramètres sont aussi **automatisables** depuis le DAW (utile car certains hôtes n'envoient pas le MIDI aux effets —
 voir *MIDI learn* / mapping de paramètres de votre DAW). Canal réglable (menu clic droit, **OMNI** par défaut).
 
+**MIDI Learn** (v1.2) : clic droit sur un potard (paramètre de la page affichée), le bouton MODE (scène, mode freeze) ou le footswitch (freeze, relâche) -> « MIDI Learn », puis bouger la pédale d'expression / appuyer sur le bouton MIDI ; « Clear MIDI » retire l'assignation. Le sous-menu *MIDI Learn* liste toutes les commandes et « Reset MIDI to defaults » revient au tableau ci-dessous. Les assignations sont sauvegardées avec le projet ; la pédale de sustain (CC 64) reste le footswitch tant que CC 64 n'est pas assigné à une autre commande.
+
 | CC | Fonction | CC | Fonction |
 |---|---|---|---|
 | 20 | DRY | 28 | VOICE |
@@ -202,3 +204,4 @@ JUCE est utilisé sous licence **AGPLv3/GPLv3** : ce projet est distribué sous 
 Le visuel « Freeze Shimmer / Studio Wiga » reste la propriété de son auteur.
 
 - v1.1.1 : menu de taille de fenêtre : « 60 % (default) », 75 %, 100 % (plus de taille en pixels)
+- v1.2.0 : MIDI Learn au clic droit sur chaque commande (Clear MIDI, assignations sauvegardées avec le projet)

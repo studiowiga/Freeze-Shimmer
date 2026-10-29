@@ -142,7 +142,7 @@ void ModeButton::paint (Graphics& g)
 void ModeButton::mouseDown (const MouseEvent& e)
 {
     longFired = false;
-    if (e.mods.isPopupMenu()) { owner.showModeMenu (this); longFired = true; return; }
+    if (e.mods.isPopupMenu()) { owner.showModeMenu (this, FreezeShimmerProcessor::kLearnScene, FreezeShimmerProcessor::kLearnFMode); longFired = true; return; }
     startTimer (800);
 }
 
@@ -193,7 +193,7 @@ void FootSwitch::paint (Graphics& g)
 
 void FootSwitch::mouseDown (const MouseEvent& e)
 {
-    if (e.mods.isPopupMenu()) { owner.showModeMenu (this); return; }
+    if (e.mods.isPopupMenu()) { owner.showModeMenu (this, FreezeShimmerProcessor::kLearnFreeze, FreezeShimmerProcessor::kLearnRelease); return; }
     pressed = true;
     ignoreUp = false;
     const auto now = Time::getMillisecondCounter();
@@ -238,6 +238,15 @@ void StatusLine::paint (Graphics& g)
     g.setColour (Colour (0x9938bdf8));
     g.drawRoundedRectangle (b, h * 0.3f, jmax (1.0f, h * 0.045f));
 
+    // MIDI Learn : « MIDI LEARN: move a control for X », puis « X = CC n » pendant 2 s
+    if (owner.learnLine.isNotEmpty())
+    {
+        g.setFont (makeFont (jmax (9.0f, h * 0.50f), true));
+        g.setColour (Colour (0xffa7f3a0));
+        g.drawFittedText (owner.learnLine, b.reduced (h * 0.45f, 0.0f).toNearestInt(), Justification::centred, 1, 0.8f);
+        return;
+    }
+
     // -- gauche : dernier paramètre touché
     const int idx = owner.lastIndex.load();
     String left = "--", right = "MIDI --";
@@ -245,12 +254,12 @@ void StatusLine::paint (Graphics& g)
     {
         const float v = owner.lastValue.load();
         left  = String (fsp::kKnobs[idx].name) + "  " + fsp::formatValue (idx, v);
-        right = "CC" + String (fsp::kKnobs[idx].cc) + " = " + String (fsp::toMidi (v));
+        right = owner.ccLabel (idx).removeCharacters (" ") + " = " + String (fsp::toMidi (v));
     }
-    else if (idx == 100) { const int s = (int) owner.lastValue.load(); left = "SCENE  " + fsp::kSceneNames[jlimit (0, 2, s)]; right = "CC" + String (fsp::kCcScene) + " = " + String (s * 43); }
-    else if (idx == 101) { const int s = (int) owner.lastValue.load(); left = "MODE  " + fsp::kModeNames[jlimit (0, 2, s)];  right = "CC" + String (fsp::kCcFMode) + " = " + String (s * 43); }
+    else if (idx == 100) { const int s = (int) owner.lastValue.load(); left = "SCENE  " + fsp::kSceneNames[jlimit (0, 2, s)]; right = owner.ccLabel (FreezeShimmerProcessor::kLearnScene).removeCharacters (" ") + " = " + String (s * 43); }
+    else if (idx == 101) { const int s = (int) owner.lastValue.load(); left = "MODE  " + fsp::kModeNames[jlimit (0, 2, s)];  right = owner.ccLabel (FreezeShimmerProcessor::kLearnFMode).removeCharacters (" ") + " = " + String (s * 43); }
     else if (idx == 104) { const int pi = jlimit (0, fsp::kNumPresets - 1, (int) owner.lastValue.load()); left = String ("PRESET ") + String (pi + 1) + "  " + String (fsp::kPresets[pi].name); right = "PC " + String (pi); }
-    else if (idx == 102) { const bool on = owner.lastValue.load() > 0.5f; left = on ? "ENGAGED" : "BYPASS"; right = "CC" + String (fsp::kCcEngage) + " = " + String (on ? 127 : 0); }
+    else if (idx == 102) { const bool on = owner.lastValue.load() > 0.5f; left = on ? "ENGAGED" : "BYPASS"; right = owner.ccLabel (FreezeShimmerProcessor::kLearnEngage).removeCharacters (" ") + " = " + String (on ? 127 : 0); }
 
     const bool flash = owner.lastFromMidi.load();
     const Colour txt (0xffd7efff), accent (0xff6fe3ff), dim (0xff86a6bd);
@@ -304,7 +313,7 @@ FreezeShimmerEditor::FreezeShimmerEditor (FreezeShimmerProcessor& p)
         knob[i].setLookAndFeel (&look);
         addAndMakeVisible (knob[i]);
     }
-    for (int i = 0; i < 6; ++i) knob[i].onRightClick = [this, i] { showSizeMenu (&knob[i]); };
+    for (int i = 0; i < 6; ++i) knob[i].onRightClick = [this, i] { showSizeMenu (&knob[i], knobParamIndex (i)); };
     knob[6].onRightClick = [this] { showKnob7Menu(); };
     addAndMakeVisible (modeButton);
     addAndMakeVisible (footSwitch);
@@ -425,20 +434,69 @@ void FreezeShimmerEditor::bindKnobs()
 void FreezeShimmerEditor::showKnob7Menu()
 {
     PopupMenu m;
+    addLearnSection (m, fsp::kKnobs[knobParamIndex (6)].name, knobParamIndex (6));
     m.addSectionHeader ("Bouton TONE / RATE / GLISS");
     m.addItem (1, "TONE / RATE (suit la page)", true, ! knob7Gliss);
     m.addItem (2, "GLISS (freeze)", true, knob7Gliss);
     m.showMenuAsync (PopupMenu::Options().withTargetComponent (&knob[6]), [this] (int r)
     {
-        if (r == 0) return;
+        if (r == 0 || handleLearnResult (r)) return;
         knob7Gliss = (r == 2);
         bindKnobs();
     });
 }
 
-void FreezeShimmerEditor::showModeMenu (Component* target)
+//==============================================================================
+// MIDI Learn
+String FreezeShimmerEditor::ccLabel (int i) const
+{
+    const int cc = proc.ccMap[jlimit (0, FreezeShimmerProcessor::kNumLearn - 1, i)].load();
+    return cc >= 0 ? "CC " + String (cc) : String ("no CC");
+}
+
+void FreezeShimmerEditor::addLearnSection (PopupMenu& m, const String& header, int a, int b)
+{
+    const int lt = proc.learnTarget.load();
+    m.addSectionHeader (header);
+    for (int i : { a, b })
+    {
+        if (i < 0) continue;
+        const String name = FreezeShimmerProcessor::learnDef (i).name;
+        m.addItem (1000 + i, "MIDI Learn: " + name + " (" + ccLabel (i) + ")", true, lt == i);
+        m.addItem (1100 + i, "Clear MIDI: " + name, proc.ccMap[i].load() >= 0);
+    }
+    if (lt >= 0) m.addItem (1200, "Cancel MIDI learn");
+    m.addSeparator();
+}
+
+void FreezeShimmerEditor::addMidiLearnSubMenu (PopupMenu& m)
+{
+    PopupMenu midi;
+    const int lt = proc.learnTarget.load();
+    for (int i = 0; i < FreezeShimmerProcessor::kNumLearn; ++i)
+        midi.addItem (1000 + i, "Learn: " + String (FreezeShimmerProcessor::learnDef (i).name) + " (" + ccLabel (i) + ")", true, lt == i);
+    midi.addSeparator();
+    if (lt >= 0) midi.addItem (1200, "Cancel MIDI learn");
+    midi.addItem (1201, "Reset MIDI to defaults (CC 20-32, 102-106)");
+    m.addSubMenu ("MIDI Learn", midi);
+}
+
+bool FreezeShimmerEditor::handleLearnResult (int r)
+{
+    const int n = FreezeShimmerProcessor::kNumLearn;
+    if (r >= 1000 && r < 1000 + n)      proc.learnTarget.store (proc.learnTarget.load() == r - 1000 ? -1 : r - 1000);   // re-cliquer annule
+    else if (r >= 1100 && r < 1100 + n) proc.ccMap[r - 1100].store (-1);
+    else if (r == 1200)                 proc.learnTarget.store (-1);
+    else if (r == 1201)                 { proc.learnTarget.store (-1); proc.resetMidiMap(); }
+    else return false;
+    return true;
+}
+
+void FreezeShimmerEditor::showModeMenu (Component* target, int learnA, int learnB)
 {
     PopupMenu m, scenes, modes, chans;
+    if (learnA >= 0)
+        addLearnSection (m, learnA == FreezeShimmerProcessor::kLearnScene ? "MODE button" : "Footswitch", learnA, learnB);
     for (int i = 0; i < 3; ++i) scenes.addItem (1 + i, fsp::kSceneNames[i], true, choice ("scene") == i);
     for (int i = 0; i < 3; ++i) modes.addItem (11 + i, fsp::kModeNames[i], true, choice ("fmode") == i);
     for (int i = 0; i < 17; ++i) chans.addItem (100 + i, i == 0 ? String ("OMNI") : String (i), true, choice ("midichan") == i);
@@ -462,10 +520,11 @@ void FreezeShimmerEditor::showModeMenu (Component* target)
     m.addItem (31, "Arreter le freeze (ou double-clic footswitch)");
     m.addSeparator();
     m.addSubMenu ("Canal MIDI", chans);
+    addMidiLearnSubMenu (m);
     m.addItem (40, "Table MIDI...");
     m.showMenuAsync (PopupMenu::Options().withTargetComponent (target), [this] (int r)
     {
-        if (r == 0) return;
+        if (r == 0 || handleLearnResult (r)) return;
         if (r >= 1 && r <= 3)        setChoice ("scene", r - 1);
         else if (r >= 11 && r <= 13) setChoice ("fmode", r - 11);
         else if (r == 21)            setPage (0);
@@ -482,16 +541,20 @@ void FreezeShimmerEditor::showModeMenu (Component* target)
     });
 }
 
-void FreezeShimmerEditor::showSizeMenu (Component* target)
+void FreezeShimmerEditor::showSizeMenu (Component* target, int learnIdx)
 {
     const int curH = getHeight();
     PopupMenu m;
+    if (learnIdx >= 0) addLearnSection (m, FreezeShimmerProcessor::learnDef (learnIdx).name, learnIdx);
     m.addSectionHeader ("Window size");
     m.addItem (301, "60 % (default)", true, std::abs (curH - art::heightPct50)  < 8);
     m.addItem (302, "75 %",   true, std::abs (curH - art::heightPct75)  < 8);
     m.addItem (303, "100 %",  true, std::abs (curH - art::heightPct100) < 8);
+    m.addSeparator();
+    addMidiLearnSubMenu (m);
     m.showMenuAsync (PopupMenu::Options().withTargetComponent (target), [this] (int r)
     {
+        if (handleLearnResult (r)) return;
         if (r == 301) setWindowHeight (art::heightPct50);
         else if (r == 304) setWindowHeight (art::heightPct60);
         else if (r == 302) setWindowHeight (art::heightPct75);
@@ -506,15 +569,16 @@ void FreezeShimmerEditor::mouseDown (const MouseEvent& e)
 
 void FreezeShimmerEditor::showMidiMap()
 {
+    // assignations actuelles (MIDI Learn : clic droit sur une commande)
     String t;
     for (int i = 0; i < fsp::kNumKnobs; ++i)
-        t << "CC " << fsp::kKnobs[i].cc << "  =  " << fsp::kKnobs[i].name << "\n";
-    t << "\nCC " << fsp::kCcScene   << "  =  Scene (0-42 / 43-85 / 86-127)"
-      << "\nCC " << fsp::kCcFMode   << "  =  Mode freeze LATCH / MOMENT / AUTO"
-      << "\nCC " << fsp::kCcFreeze  << "  =  Footswitch freeze (>= 64)"
-      << "\nCC " << fsp::kCcSustain << "  =  Pedale de sustain = footswitch"
-      << "\nCC " << fsp::kCcEngage  << "  =  Effet actif (>= 64) / bypass"
-      << "\nCC " << fsp::kCcRelease << "  =  Relache le freeze"
+        t << ccLabel (i) << "  =  " << fsp::kKnobs[i].name << "\n";
+    t << "\n" << ccLabel (FreezeShimmerProcessor::kLearnScene)   << "  =  Scene (0-42 / 43-85 / 86-127)"
+      << "\n" << ccLabel (FreezeShimmerProcessor::kLearnFMode)   << "  =  Mode freeze LATCH / MOMENT / AUTO"
+      << "\n" << ccLabel (FreezeShimmerProcessor::kLearnFreeze)  << "  =  Footswitch freeze (>= 64)"
+      << "\nCC " << fsp::kCcSustain << "  =  Pedale de sustain = footswitch (si CC 64 non assigne)"
+      << "\n" << ccLabel (FreezeShimmerProcessor::kLearnEngage)  << "  =  Effet actif (>= 64) / bypass"
+      << "\n" << ccLabel (FreezeShimmerProcessor::kLearnRelease) << "  =  Relache le freeze"
       << "\nProgram Change 0-9  =  Preset d'usine";
     AlertWindow::showMessageBoxAsync (MessageBoxIconType::InfoIcon, "Freeze Shimmer - table MIDI", t);
 }
@@ -584,8 +648,27 @@ void FreezeShimmerEditor::timerCallback()
         askRepaint (footSwitch);
     }
 
+    // MIDI Learn : attente puis confirmation 2 s dans la ligne d'état
+    {
+        const int learned = proc.lastLearned.exchange (-1);
+        const int lt = proc.learnTarget.load();
+        if (learned >= 0)
+        {
+            learnLine = String (FreezeShimmerProcessor::learnDef (learned).name) + " = " + ccLabel (learned);
+            learnLineUntil = now + 2000.0;
+        }
+        else if (lt >= 0)
+        {
+            learnLine = "MIDI LEARN: move a control for " + String (FreezeShimmerProcessor::learnDef (lt).name);
+            learnLineUntil = now + 100.0;
+        }
+        else if (now >= learnLineUntil)
+            learnLine.clear();
+    }
+
     // ligne d'état
     StatusState st;
+    st.learn = learnLine;
     st.idx = lastIndex.load(); st.value = lastValue.load(); st.flash = lastFromMidi.load(); st.frozen = frozen;
     st.scene = choice ("scene"); st.fmode = choice ("fmode"); st.page = page();
     if (! drawnStatusValid || st != drawnStatus)
