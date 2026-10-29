@@ -60,7 +60,7 @@ cmake --build build --config Release --parallel
 ```
 
 **Via GitHub** : poussez le dépôt ; le workflow `.github/workflows/build.yml` compile le VST3 sur `windows-2022` et sur `macos-14`, lance les tests DSP
-sous Linux et publie les zips (`FreezeShimmer-win64.zip`, `FreezeShimmer-macos.zip`). Un tag `v1.0.1` crée une *Release* avec le zip.
+sous Linux et publie les zips (`FreezeShimmer-win64.zip`, `FreezeShimmer-macos.zip`). Un tag `v1.1.0` crée une *Release* avec le zip.
 
 ---
 
@@ -191,6 +191,10 @@ Tests DSP en local (Linux/macOS/WSL) : `g++ -O2 -std=c++17 -ISource/dsp tests/ds
   réinjectée dans la boucle (pitch shifter granulaire). Gain de boucle automatiquement réduit quand TIME augmente (pas d'auto-oscillation) ; TIME max = tank figé.
 - Latence : aucune déclarée (le freeze met 1-3 trames de 21 ms à atteindre son plein niveau).
 - Interface redimensionnable à ratio fixe (≈ 0,89).
+
+## Versions
+
+- v1.1.0 : anti-gel v2 (JUCE 8.0.15, caches refaits par le timer, chien de garde, aucun appel à l'hôte depuis le thread audio)
 
 ## Licence
 

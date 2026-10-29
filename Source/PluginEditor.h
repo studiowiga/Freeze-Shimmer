@@ -137,8 +137,21 @@ public:
 private:
     void parameterChanged (const juce::String&, float) override;
     void timerCallback() override;
+    void visibilityChanged() override;
     void useSoftwareRenderer();
     void bindKnobs();
+
+    // anti-gel v2 : fond à la taille réelle en pixels (refait par le timer seulement), suivi de la
+    // fenêtre hôte, de l'échelle et des redessins demandés (chien de garde)
+    void rebuildCaches (float scale = 0.0f);
+    float physicalScale() const;
+    void askRepaint (juce::Component& c);
+    juce::Image bgScaled;
+    int cacheW = 0, cacheH = 0;
+    float cacheScale = 0.0f;
+    int resizeSettle = 0;
+    void* lastPeer = nullptr;
+    double lastPaintMs = 0.0, repaintAskedMs = 0.0, lastScaleCheckMs = 0.0, lastRendererCheckMs = 0.0;
     void showKnob7Menu();
 
     PedalLook look;

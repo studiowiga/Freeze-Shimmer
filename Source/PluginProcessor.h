@@ -6,11 +6,12 @@
 #include "dsp/FreezeEngine.h"
 #include <array>
 
-class FreezeShimmerProcessor : public juce::AudioProcessor
+class FreezeShimmerProcessor : public juce::AudioProcessor,
+                               private juce::Timer
 {
 public:
     FreezeShimmerProcessor();
-    ~FreezeShimmerProcessor() override = default;
+    ~FreezeShimmerProcessor() override { stopTimer(); }
 
     void prepareToPlay (double sampleRate, int samplesPerBlock) override;
     void releaseResources() override {}
@@ -65,6 +66,18 @@ private:
     void handleMidi (juce::MidiBuffer& midi);
     void setNormalised (const char* id, float v01);
     void applyCommand (int cmd);
+
+    // Anti-gel v2 (Studio Wiga) : valeurs demandées par le thread audio (MIDI, commandes du footswitch),
+    // transmises à l'hôte par le timer du processeur (60 Hz, thread message)
+    void timerCallback() override;
+    static constexpr int kQScene = fsp::kNumKnobs, kQFMode = fsp::kNumKnobs + 1, kQEngage = fsp::kNumKnobs + 2;
+    static constexpr int kNumQueued = fsp::kNumKnobs + 3;
+    static const char* queuedId (int i);
+    void queueNormalised (int index, float v01);
+    float engageNow() const;           // valeur en file si elle existe, sinon la valeur courante
+    std::atomic<float> pendingValue[kNumQueued];
+    std::atomic<bool>  pendingSet[kNumQueued];
+    std::atomic<int>   pendingPreset { -1 };
 
     fs::ShimmerEngine shimmer;
     fs::FreezeEngine  freeze;

@@ -5,7 +5,7 @@ if(APPLE)
   set(CMAKE_OSX_DEPLOYMENT_TARGET "10.13" CACHE STRING "macOS minimum")
 endif()
 
-project(FreezeShimmer VERSION 1.0.1 LANGUAGES C CXX)
+project(FreezeShimmer VERSION 1.1.0 LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -21,7 +21,7 @@ option(FS_BUILD_TESTS      "Compile le test DSP hors JUCE" OFF)
 include(FetchContent)
 FetchContent_Declare(JUCE
   GIT_REPOSITORY https://github.com/juce-framework/JUCE.git
-  GIT_TAG        8.0.12
+  GIT_TAG        8.0.15
   GIT_SHALLOW    ON)
 FetchContent_MakeAvailable(JUCE)
 

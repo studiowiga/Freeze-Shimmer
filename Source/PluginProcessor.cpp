@@ -22,8 +22,44 @@ FreezeShimmerProcessor::FreezeShimmerProcessor()
     pEngage = get ("engage"); pMidiChan = get ("midichan");
 
     for (auto* v : { &wetL, &wetR, &shL, &shR, &frL, &frR }) v->assign ((size_t) kChunk, 0.0f);
+    for (int i = 0; i < kNumQueued; ++i) { pendingValue[i] = 0.0f; pendingSet[i] = false; }
 
     applyPreset (0);   // son par défaut : CLEAN PLATE (premier preset) (écrasé par l'état sauvegardé du projet)
+    startTimerHz (60);
+}
+
+// Anti-gel v2 (Studio Wiga) : jamais d'appel à l'hôte (setValueNotifyingHost) ni d'allocation depuis le
+// thread audio. Le MIDI et les commandes du footswitch mettent la valeur en file ; ce timer (thread
+// message) la transmet au DAW et à la fenêtre, et charge les presets demandés par Program Change.
+const char* FreezeShimmerProcessor::queuedId (int i)
+{
+    if (i < fsp::kNumKnobs) return fsp::kKnobs[juce::jmax (0, i)].id;
+    if (i == kQScene) return "scene";
+    if (i == kQFMode) return "fmode";
+    return "engage";
+}
+
+void FreezeShimmerProcessor::queueNormalised (int index, float v01)
+{
+    if (index < 0 || index >= kNumQueued) return;
+    pendingValue[index].store (juce::jlimit (0.0f, 1.0f, v01), std::memory_order_relaxed);
+    pendingSet[index].store (true, std::memory_order_release);
+}
+
+float FreezeShimmerProcessor::engageNow() const
+{
+    return pendingSet[kQEngage].load (std::memory_order_acquire) ? pendingValue[kQEngage].load (std::memory_order_relaxed)
+                                                                 : readP (pEngage);
+}
+
+void FreezeShimmerProcessor::timerCallback()
+{
+    const int pr = pendingPreset.exchange (-1);
+    if (pr >= 0) applyPreset (pr);
+
+    for (int i = 0; i < kNumQueued; ++i)
+        if (pendingSet[i].exchange (false, std::memory_order_acquire))
+            setNormalised (queuedId (i), pendingValue[i].load (std::memory_order_relaxed));
 }
 
 bool FreezeShimmerProcessor::isBusesLayoutSupported (const BusesLayout& l) const
@@ -67,19 +103,20 @@ void FreezeShimmerProcessor::setCurrentProgram (int i) { applyPreset (i); }
 
 void FreezeShimmerProcessor::applyCommand (int cmd)
 {
-    auto engage = [this] (bool on) { setNormalised ("engage", on ? 1.0f : 0.0f); };
+    // appelé par le thread audio : l'engage passe par la file (anti-gel v2)
+    auto engage = [this] (bool on) { queueNormalised (kQEngage, on ? 1.0f : 0.0f); };
     const int mode = (int) readP (pFMode);
     switch ((Command) cmd)
     {
         case cmdCapture:
-            if (readP (pEngage) < 0.5f) engage (true);
+            if (engageNow() < 0.5f) engage (true);
             freeze.capture();
             break;
         case cmdRelease:                       // double-clic footswitch / CC106 : arrête le freeze
             freeze.releaseAll();
             break;
         case cmdHoldOn:                        // footswitch maintenu : fige ce qui est entendu
-            if (readP (pEngage) < 0.5f) engage (true);
+            if (engageNow() < 0.5f) engage (true);
             if (mode == 1)      freeze.momentPress();
             else if (mode == 0) freeze.holdPress();
             else                freeze.capture();
@@ -91,10 +128,10 @@ void FreezeShimmerProcessor::applyCommand (int cmd)
         case cmdToggleAuto:
             autoArmedState.store (! autoArmedState.load());
             freeze.setAutoArmed (autoArmedState.load());
-            if (readP (pEngage) < 0.5f) engage (true);
+            if (engageNow() < 0.5f) engage (true);
             break;
         case cmdToggleEngage:
-            engage (readP (pEngage) < 0.5f);
+            engage (engageNow() < 0.5f);
             break;
         default: break;
     }
@@ -112,7 +149,7 @@ void FreezeShimmerProcessor::handleMidi (juce::MidiBuffer& midi)
 
         if (m.isProgramChange())
         {
-            applyPreset (m.getProgramChangeNumber() % fsp::kNumPresets);
+            pendingPreset.store (m.getProgramChangeNumber() % fsp::kNumPresets);   // chargé par le timer
             continue;
         }
         if (! m.isController()) continue;
@@ -122,15 +159,15 @@ void FreezeShimmerProcessor::handleMidi (juce::MidiBuffer& midi)
         bool handled = false;
 
         for (int i = 0; i < fsp::kNumKnobs; ++i)
-            if (fsp::kKnobs[i].cc == cc) { setNormalised (fsp::kKnobs[i].id, v01); handled = true; break; }
+            if (fsp::kKnobs[i].cc == cc) { queueNormalised (i, v01); handled = true; break; }
 
         if (! handled)
         {
             handled = true;
             switch (cc)
             {
-                case fsp::kCcScene:  setNormalised ("scene", (float) juce::jmin (2, val / 43) / 2.0f); break;
-                case fsp::kCcFMode:  setNormalised ("fmode", (float) juce::jmin (2, val / 43) / 2.0f); break;
+                case fsp::kCcScene:  queueNormalised (kQScene, (float) juce::jmin (2, val / 43) / 2.0f); break;
+                case fsp::kCcFMode:  queueNormalised (kQFMode, (float) juce::jmin (2, val / 43) / 2.0f); break;
                 case fsp::kCcFreeze:
                 case fsp::kCcSustain:
                 {
@@ -138,7 +175,7 @@ void FreezeShimmerProcessor::handleMidi (juce::MidiBuffer& midi)
                     if (down != sustainDown) { sustainDown = down; footswitch (down); }
                     break;
                 }
-                case fsp::kCcEngage:  setNormalised ("engage", val >= 64 ? 1.0f : 0.0f); break;
+                case fsp::kCcEngage:  queueNormalised (kQEngage, val >= 64 ? 1.0f : 0.0f); break;
                 case fsp::kCcRelease: if (val >= 64) applyCommand (cmdRelease); break;
                 default: handled = false; break;
             }
@@ -193,7 +230,7 @@ void FreezeShimmerProcessor::processBlock (juce::AudioBuffer<float>& buffer, juc
     freeze.setParams (fp);
     freeze.setAutoArmed (autoArmedState.load());
 
-    const bool engaged = readP (pEngage) > 0.5f;
+    const bool engaged = engageNow() > 0.5f;   // tient compte d'un engage encore en file (même bloc)
     if (! engaged && bypassMix > 0.5f) freeze.releaseAll();   // le freeze s'arrête au bypass (comme la pédale)
 
     const float dryLvl = readP (pDry), fxLvl = readP (pEffect);

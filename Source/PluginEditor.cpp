@@ -321,8 +321,10 @@ FreezeShimmerEditor::FreezeShimmerEditor (FreezeShimmerProcessor& p)
     setResizeLimits (roundToInt ((double) art::heightPct50 * aspect), art::heightPct50,
                      roundToInt ((double) art::heightMax * aspect), art::heightMax);
     getConstrainer()->setFixedAspectRatio (aspect);
+    setOpaque (true);                      // anti-gel : l'hôte ne redessine jamais ce qui est derrière la fenêtre
     const int h0 = jlimit (art::heightPct50, art::heightMax, proc.uiHeight.load());
     setSize (roundToInt ((double) h0 * aspect), h0);
+    rebuildCaches();
     lastPresetSeen = proc.presetIndex.load();
     startTimerHz (30);
 }
@@ -545,7 +547,27 @@ void FreezeShimmerEditor::timerCallback()
     const int pr = proc.presetIndex.load();
     if (pr != lastPresetSeen) { lastPresetSeen = pr; lastIndex.store (104); lastValue.store ((float) pr); lastFromMidi.store (false); }
 
-    useSoftwareRenderer();   // au cas où la fenêtre a été recréée par l'hôte (changement d'écran, d'échelle…)
+    // moteur logiciel : seulement si la fenêtre hôte a changé, ou au plus une fois par seconde
+    const double now = Time::getMillisecondCounterHiRes();
+    if (getPeer() != lastPeer || now - lastRendererCheckMs > 1000.0) { lastRendererCheckMs = now; useSoftwareRenderer(); }
+
+    // caches : reconstruits ici seulement (jamais dans paint)
+    if (resizeSettle > 0 && --resizeSettle == 0) rebuildCaches();
+    else if (resizeSettle == 0 && now - lastScaleCheckMs > 250.0)
+    {
+        lastScaleCheckMs = now;
+        const float sc = physicalScale();
+        if (std::abs (sc - cacheScale) > 0.01f) rebuildCaches (sc);
+    }
+
+    // chien de garde : un redessin demandé n'arrive pas -> on relance le moteur de rendu et on redessine tout
+    if (repaintAskedMs > 0.0 && isShowing() && now - repaintAskedMs > 1500.0 && lastPaintMs < repaintAskedMs)
+    {
+        repaintAskedMs = 0.0;
+        lastPeer = nullptr;
+        useSoftwareRenderer();
+        repaint();
+    }
 
     // on ne redessine un composant que si ce qu'il affiche a vraiment changé (zéro travail au repos)
     const bool frozen = proc.frozenState.load();
@@ -554,14 +576,14 @@ void FreezeShimmerEditor::timerCallback()
     const bool blink = (Time::getMillisecondCounter() / 350) % 2 == 0;
     modeButton.setBlinkPhase (blink);
     const bool modeOn = getBool ("engage") && ! (frozen && ! blink);
-    if (modeOn != drawnModeOn) { drawnModeOn = modeOn; modeButton.repaint(); }
+    if (modeOn != drawnModeOn) { drawnModeOn = modeOn; askRepaint (modeButton); }
 
     // footswitch : halo pulsé tant que le freeze est actif (animation continue), un dernier redessin à l'arrêt
     const float pulse = frozen ? 0.55f + 0.25f * std::sin ((float) Time::getMillisecondCounter() * 0.004f) : 0.0f;
     if (frozen != drawnFrozen || std::abs (pulse - drawnPulse) >= 0.002f)
     {
         drawnFrozen = frozen; drawnPulse = pulse;
-        footSwitch.repaint();
+        askRepaint (footSwitch);
     }
 
     // ligne d'état
@@ -571,26 +593,74 @@ void FreezeShimmerEditor::timerCallback()
     if (! drawnStatusValid || st != drawnStatus)
     {
         drawnStatus = st; drawnStatusValid = true;
-        status.repaint();
+        askRepaint (status);
     }
 }
 
 void FreezeShimmerEditor::paint (Graphics& g)
 {
+    lastPaintMs = Time::getMillisecondCounterHiRes();
+    repaintAskedMs = 0.0;
     g.fillAll (Colours::white);
+    // anti-gel : aucun rescale ici, on dessine le cache existant (ou l'original en attendant le timer)
+    if (bgScaled.isValid())
+    {
+        g.setImageResamplingQuality (Graphics::lowResamplingQuality);
+        g.drawImage (bgScaled, getLocalBounds().toFloat(), RectanglePlacement::stretchToFit);
+        return;
+    }
     g.setImageResamplingQuality (Graphics::highResamplingQuality);
     const bool native = std::abs (getHeight() - art::heightPct50) <= 2 && background1x.isValid();
     g.drawImage (native ? background1x : background, getLocalBounds().toFloat(), RectanglePlacement::stretchToFit);
+}
+
+// fond déjà à la taille de la fenêtre en pixels physiques : constructeur et timer, jamais paint()
+void FreezeShimmerEditor::rebuildCaches (float sc)
+{
+    if (sc <= 0.0f) sc = cacheScale > 0.0f ? cacheScale : physicalScale();
+    const int w = getWidth(), h = getHeight();
+    if (w <= 0 || h <= 0) return;
+    if (w == cacheW && h == cacheH && std::abs (sc - cacheScale) < 0.01f && bgScaled.isValid()) return;
+
+    cacheW = w; cacheH = h; cacheScale = sc;
+    const int pw = roundToInt ((float) w * sc), ph = roundToInt ((float) h * sc);
+    // taille par défaut en 100 % : l'image 1x est déjà nette, on la garde telle quelle
+    if (background1x.isValid() && std::abs (ph - background1x.getHeight()) <= 2) bgScaled = background1x;
+    else if (pw >= background.getWidth())                                         bgScaled = background;
+    else bgScaled = background.rescaled (pw, ph, Graphics::highResamplingQuality);
+    repaint();
+}
+
+float FreezeShimmerEditor::physicalScale() const
+{
+    return jlimit (1.0f, 4.0f, (float) Component::getApproximateScaleFactorForComponent (this));
+}
+
+void FreezeShimmerEditor::askRepaint (Component& c)
+{
+    if (repaintAskedMs <= 0.0) repaintAskedMs = Time::getMillisecondCounterHiRes();
+    repaint (c.getBounds());       // la zone de l'éditeur couvre aussi le composant (redessiné avec)
 }
 
 //==============================================================================
 // Anti-gel de la fenêtre (Windows) : JUCE 8 dessine par défaut avec Direct2D (carte graphique).
 // Avec certains pilotes (Intel notamment) la fenêtre du plugin cesse de se rafraîchir alors que
 // le DAW continue de tourner. Le moteur logiciel est stable partout et largement assez rapide ici.
+//
+// Anti-gel v2 (Studio Wiga) :
+//  1. moteur de rendu logiciel forcé sur Windows, appliqué à chaque nouvelle fenêtre hôte (peer)
+//     et revérifié toutes les secondes, jamais en boucle ;
+//  2. aucun calcul lourd dans paint() : le fond mis à l'échelle est refait par le timer seulement,
+//     après stabilisation de la taille ou quand l'échelle d'affichage change (au plus toutes les 250 ms) ;
+//  3. chien de garde : si un redessin demandé n'est pas arrivé au bout de 1,5 s alors que la fenêtre
+//     est visible, le moteur de rendu est réappliqué et toute la fenêtre est redessinée ;
+//  4. côté audio : aucun appel à l'hôte depuis le thread audio (voir PluginProcessor).
 void FreezeShimmerEditor::useSoftwareRenderer()
 {
+    auto* peer = getPeer();
+    if (peer != lastPeer) { lastPeer = peer; repaint(); }
    #if JUCE_WINDOWS
-    if (auto* peer = getPeer())
+    if (peer != nullptr)
     {
         int sw = peer->getAvailableRenderingEngines().indexOf ("Software Renderer");
         if (sw < 0) sw = 0;
@@ -600,23 +670,15 @@ void FreezeShimmerEditor::useSoftwareRenderer()
    #endif
 }
 
-void FreezeShimmerEditor::parentHierarchyChanged()
-{
-    useSoftwareRenderer();
-}
+void FreezeShimmerEditor::parentHierarchyChanged() { useSoftwareRenderer(); }
+void FreezeShimmerEditor::visibilityChanged()      { useSoftwareRenderer(); if (isShowing()) repaint(); }
 
 void FreezeShimmerEditor::resized()
 {
-    // jamais plus petit que la taille par défaut (50 %), quelle que soit la demande de l'hôte
-    // tolérance de 2 px : avec la mise à l'échelle Windows (125 %, 150 %…) l'hôte arrondit les tailles ;
-    // sans marge, les deux se renvoient la fenêtre en boucle
-    const int minW = roundToInt ((double) art::heightPct50 * (double) art::W / (double) art::H);
-    if (getHeight() < art::heightPct50 - 2 || getWidth() < minW - 2)
-    {
-        setSize (minW, art::heightPct50);
-        return;
-    }
-    proc.uiHeight.store (getHeight());
+    // anti-gel : jamais de setSize ici (mise à l'échelle Windows 125 / 150 % : l'hôte arrondit les tailles) ;
+    // les limites du constrainer (jamais plus petit que la taille par défaut) suffisent
+    proc.uiHeight.store (jlimit (art::heightPct50, art::heightMax, getHeight()));
+    resizeSettle = 4;              // le fond sera refait par le timer quand la taille ne bouge plus
     const float s = (float) getWidth() / art::W;
     auto place = [s] (Component& c, const art::Circle& k, float scale = 1.0f)
     {
