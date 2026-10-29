@@ -9,7 +9,7 @@ on:
 
 jobs:
   build-macos:
-    runs-on: macos-latest
+    runs-on: macos-15-intel   # Mac Intel : file Apple Silicon saturée (binaire universel quand même)
     steps:
       - uses: actions/checkout@v5
         with:
