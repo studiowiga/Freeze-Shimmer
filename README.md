@@ -200,3 +200,5 @@ Tests DSP en local (Linux/macOS/WSL) : `g++ -O2 -std=c++17 -ISource/dsp tests/ds
 
 JUCE est utilisé sous licence **AGPLv3/GPLv3** : ce projet est distribué sous **GPL-3.0** (voir `LICENSE`).
 Le visuel « Freeze Shimmer / Studio Wiga » reste la propriété de son auteur.
+
+- v1.1.1 : menu de taille de fenêtre : « 60 % (default) », 75 %, 100 % (plus de taille en pixels)
